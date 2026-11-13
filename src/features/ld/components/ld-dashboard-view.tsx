@@ -82,12 +82,14 @@ export function LdDashboardView() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Active Growth Plans", "1,842", "75% Coverage"],
-          ["Gaps Being Targeted", "428", "Unique skill sets"],
-          ["Avg. Gap Closure Velocity", "+0.8", "Levels / Year"],
-          ["Capability ROI", "92%", "Verified impact"],
-        ].map(([label, value, note]) => (
+        {(
+          [
+            ["Active Growth Plans", "1,842", "75% Coverage"],
+            ["Gaps Being Targeted", "428", "Unique skill sets"],
+            ["Avg. Gap Closure Velocity", "+0.8", "Levels / Year"],
+            ["Capability ROI", "92%", "Verified impact"],
+          ] as const
+        ).map(([label, value, note]) => (
           <div key={label} className="rounded-2xl border border-border-slate bg-white p-6 shadow-sm">
             <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">{label}</p>
             <div className="mt-2 flex items-end justify-between gap-2">

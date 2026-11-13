@@ -66,7 +66,9 @@ export function GrowthPathwayView({ planId }: { planId: string }) {
           title="Upload Practice Evidence"
           hint="PDF, image, or document up to 10MB"
           maxBytes={10 * 1024 * 1024}
-          onFile={(file) => toast.success("Evidence uploaded", { description: file.name })}
+          onFile={(file) => {
+            toast.success("Evidence uploaded", { description: file.name });
+          }}
         />
       </section>
       <section className="rounded-2xl border border-dashed border-border-slate bg-slate-50 p-5">
