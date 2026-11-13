@@ -1,0 +1,133 @@
+import type {
+  EmployeeDirectoryMetrics,
+  EmployeeImportRecord,
+  EmployeeRecord,
+} from "@/features/employees/types";
+
+export const mockEmployees: EmployeeRecord[] = [
+  {
+    id: "emp-8721",
+    employeeCode: "EMP-8721",
+    name: "James Miller",
+    avatarUrl:
+      "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg",
+    departmentId: "it",
+    departmentName: "IT Infrastructure",
+    roleId: "role-ssa",
+    roleTitle: "Senior Solutions Architect",
+    profileVersion: "V2.4 (Published)",
+    mappingStatus: "aligned",
+    assessmentReady: true,
+    email: "james.miller@gec.example",
+    joinedYear: 2019,
+    location: "London",
+  },
+  {
+    id: "emp-9042",
+    employeeCode: "EMP-9042",
+    name: "Robert Chen",
+    avatarUrl:
+      "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg",
+    departmentId: "it",
+    departmentName: "IT Infrastructure",
+    roleId: "role-lde",
+    roleTitle: "Lead Data Engineer",
+    profileVersion: "V1.1 (Review)",
+    mappingStatus: "pending",
+    assessmentReady: false,
+    email: "robert.chen@gec.example",
+    joinedYear: 2021,
+    location: "Singapore",
+  },
+  {
+    id: "emp-7710",
+    employeeCode: "EMP-7710",
+    name: "Elena Rodriguez",
+    avatarUrl:
+      "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg",
+    departmentId: "it",
+    departmentName: "IT Infrastructure",
+    roleId: "role-ssa",
+    roleTitle: "Senior Solutions Architect",
+    profileVersion: "V2.4 (Published)",
+    mappingStatus: "aligned",
+    assessmentReady: true,
+    email: "elena.rodriguez@gec.example",
+    joinedYear: 2022,
+    location: "Madrid",
+  },
+  {
+    id: "emp-6612",
+    employeeCode: "EMP-6612",
+    name: "Priya Shah",
+    avatarUrl:
+      "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg",
+    departmentId: "hr",
+    departmentName: "Human Resources",
+    roleId: "role-hrbp",
+    roleTitle: "HR Business Partner",
+    profileVersion: null,
+    mappingStatus: "exception",
+    assessmentReady: false,
+    email: "priya.shah@gec.example",
+    joinedYear: 2020,
+    location: "Mumbai",
+  },
+  {
+    id: "emp-5501",
+    employeeCode: "EMP-5501",
+    name: "Tom Nguyen",
+    avatarUrl:
+      "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg",
+    departmentId: "finance",
+    departmentName: "Finance & Accounting",
+    roleId: null,
+    roleTitle: null,
+    profileVersion: null,
+    mappingStatus: "unmapped",
+    assessmentReady: false,
+    email: "tom.nguyen@gec.example",
+    joinedYear: 2023,
+    location: "Sydney",
+  },
+  {
+    id: "emp-4408",
+    employeeCode: "EMP-4408",
+    name: "Aisha Khan",
+    avatarUrl:
+      "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg",
+    departmentId: "it",
+    departmentName: "Cyber Security",
+    roleId: "role-cyber",
+    roleTitle: "Cyber Security Analyst",
+    profileVersion: "V0.9 (Draft)",
+    mappingStatus: "aligned",
+    assessmentReady: true,
+    email: "aisha.khan@gec.example",
+    joinedYear: 2018,
+    location: "Dubai",
+  },
+];
+
+export const mockEmployeeMetrics: EmployeeDirectoryMetrics = {
+  total: 2450,
+  mappedPercent: 89,
+  unmapped: 258,
+  awaitingAssignment: 45,
+  assessmentReady: 1840,
+};
+
+export const mockEmployeeImports: EmployeeImportRecord[] = [
+  {
+    id: "imp-1",
+    fileName: "workforce_q4.csv",
+    status: "completed",
+    relativeTime: "1 day ago",
+  },
+  {
+    id: "imp-2",
+    fileName: "new_hires_oct.xlsx",
+    status: "archived",
+    relativeTime: "2 weeks ago",
+  },
+];

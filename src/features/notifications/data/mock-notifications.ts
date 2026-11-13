@@ -1,0 +1,52 @@
+import type { AppNotification } from "@/features/notifications/types";
+
+export const mockNotifications: AppNotification[] = [
+  {
+    id: "n-1",
+    title: "Self-Assessment Period Now Open",
+    body: "The 2024 Global Capability Review cycle has officially started. Complete your self-ratings by November 15 to stay aligned with your role requirements.",
+    relativeTime: "2 hours ago",
+    tone: "success",
+    read: false,
+    section: "new",
+    primaryAction: {
+      label: "Go to Assessment",
+      href: "/me/assessments/cycle-2024/start",
+    },
+    secondaryActionLabel: "Dismiss",
+    icon: "assessment",
+  },
+  {
+    id: "n-2",
+    title: "Capability Evidence Verified",
+    body: "Your manager, Michael Kyle, has verified the evidence submitted for Cloud Infrastructure Design. You have officially reached Level 4 (Expert).",
+    relativeTime: "Yesterday",
+    tone: "info",
+    read: false,
+    section: "new",
+    primaryAction: { label: "View Updated Skills", href: "/me/skills" },
+    icon: "evidence",
+  },
+  {
+    id: "n-3",
+    title: "New Learning Assignment",
+    body: 'You have been assigned the "AI Ethics & Strategy" masterclass as part of your development plan.',
+    relativeTime: "3 days ago",
+    tone: "neutral",
+    read: true,
+    section: "earlier",
+    primaryAction: { label: "Open Catalogue", href: "/learning" },
+    icon: "learning",
+  },
+  {
+    id: "n-4",
+    title: "Role Profile Approved",
+    body: "Senior Solutions Architect profile V2.4 was approved and published for Global Enterprise Corp.",
+    relativeTime: "5 days ago",
+    tone: "neutral",
+    read: true,
+    section: "earlier",
+    primaryAction: { label: "View Role", href: "/roles/role-ssa" },
+    icon: "system",
+  },
+];
