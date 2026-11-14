@@ -6,7 +6,15 @@ export function isNavItemActive(
 ): boolean {
   const prefix = item.matchPrefix ?? item.href;
 
-  if (prefix === "/" || prefix === "/platform" || prefix === "/me" || prefix === "/manager" || prefix === "/ld" || prefix === "/org") {
+  if (
+    prefix === "/" ||
+    prefix === "/platform" ||
+    prefix === "/me" ||
+    prefix === "/manager" ||
+    prefix === "/ld" ||
+    prefix === "/org" ||
+    prefix === "/talent"
+  ) {
     return pathname === prefix;
   }
 

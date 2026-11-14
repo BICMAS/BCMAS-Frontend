@@ -168,6 +168,48 @@ export const globalSearchIndex: GlobalSearchResult[] = [
     href: "/insights/gaps",
     category: "Manager",
   },
+  {
+    id: "talent",
+    title: "Talent Assessment",
+    description: "Recruitment and promotion readiness",
+    href: "/talent",
+    category: "Development",
+  },
+  {
+    id: "talent-recruitment",
+    title: "Recruitment Assessments",
+    description: "Candidate assessments against approved role profiles",
+    href: "/talent/recruitment",
+    category: "Development",
+  },
+  {
+    id: "talent-promotion",
+    title: "Promotion Assessments",
+    description: "Internal promotion against an approved role",
+    href: "/talent/promotion",
+    category: "Development",
+  },
+  {
+    id: "talent-library",
+    title: "Assessment Library",
+    description: "Reusable talent assessment items",
+    href: "/talent/library",
+    category: "Development",
+  },
+  {
+    id: "talent-insights",
+    title: "Talent Insights",
+    description: "Same-role comparison and readiness gaps",
+    href: "/talent/insights",
+    category: "Development",
+  },
+  {
+    id: "manager-promotion",
+    title: "Promotion Review",
+    description: "Direct report promotion decisions",
+    href: "/manager/promotion",
+    category: "Manager",
+  },
 ];
 
 export function searchGlobalIndex(query: string, limit = 8): GlobalSearchResult[] {

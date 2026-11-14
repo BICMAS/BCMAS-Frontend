@@ -9,6 +9,11 @@ export async function listRoles(): Promise<RoleRecord[]> {
   return structuredClone(rolesState);
 }
 
+/** Synchronous read for forms. Does not wait. */
+export function listRoleRecords(): RoleRecord[] {
+  return structuredClone(rolesState);
+}
+
 export async function getRole(roleId: string): Promise<RoleRecord | null> {
   return structuredClone(rolesState.find((r) => r.id === roleId) ?? null);
 }

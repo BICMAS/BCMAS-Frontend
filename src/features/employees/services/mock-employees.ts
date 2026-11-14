@@ -17,6 +17,11 @@ export async function listEmployees(): Promise<EmployeeRecord[]> {
   return structuredClone(employeesState);
 }
 
+/** Synchronous read for forms. Does not wait. */
+export function listEmployeeRecords(): EmployeeRecord[] {
+  return structuredClone(employeesState);
+}
+
 export async function getEmployeeDirectoryMetrics(): Promise<EmployeeDirectoryMetrics> {
   return structuredClone(mockEmployeeMetrics);
 }

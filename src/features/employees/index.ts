@@ -8,6 +8,7 @@ export {
   getEmployee,
   getEmployeeDirectoryMetrics,
   listEmployeeImports,
+  listEmployeeRecords,
   listEmployees,
 } from "./services/mock-employees";
 export {

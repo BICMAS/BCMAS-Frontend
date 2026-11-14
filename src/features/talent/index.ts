@@ -1,0 +1,14 @@
+export { OwnPromotionListView } from "@/features/talent/components/own-promotion-list-view";
+export { PromotionCreateView } from "@/features/talent/components/promotion-create-view";
+export { PromotionListView } from "@/features/talent/components/promotion-list-view";
+export { PromotionReportView } from "@/features/talent/components/promotion-report-view";
+export { PromotionResultsView } from "@/features/talent/components/promotion-results-view";
+export { PromotionStartView } from "@/features/talent/components/promotion-start-view";
+export { RecruitmentCreateView } from "@/features/talent/components/recruitment-create-view";
+export { RecruitmentDetailView } from "@/features/talent/components/recruitment-detail-view";
+export { RecruitmentInviteView } from "@/features/talent/components/recruitment-invite-view";
+export { RecruitmentListView } from "@/features/talent/components/recruitment-list-view";
+export { TalentInsightsView } from "@/features/talent/components/talent-insights-view";
+export { TalentLibraryView } from "@/features/talent/components/talent-library-view";
+export { TalentOverviewView } from "@/features/talent/components/talent-overview-view";
+export { TalentRecordView } from "@/features/talent/components/talent-record-view";
