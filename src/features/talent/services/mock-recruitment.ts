@@ -167,7 +167,7 @@ export async function submitCandidateInvite(
   loadPersisted();
   const choice = scenarioChoices.find((item) => item.id === input.scenarioChoiceId);
   if (!choice) return null;
-  let updated: RecruitmentAssessment | null = null;
+  let updatedId: string | null = null;
   recruitmentAssessments = recruitmentAssessments.map((item) => {
     if (item.inviteToken !== token || item.progress !== "Invited") return item;
     const knowledge = item.rubric.map((row) => {
@@ -202,11 +202,11 @@ export async function submitCandidateInvite(
         { id: `${item.id}-submitted`, action: "Submitted", actor: "Candidate", at: "2026-11-14" },
       ],
     };
-    updated = next;
+    updatedId = next.id;
     return next;
   });
   persistRecruitment();
-  return updated ? getRecruitmentAssessment(updated.id) : null;
+  return updatedId ? getRecruitmentAssessment(updatedId) : null;
 }
 
 function overallReadiness(rubric: RubricRow[]): Readiness {
