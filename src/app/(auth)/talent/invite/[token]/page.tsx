@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { RecruitmentInviteView } from "@/features/talent";
 
@@ -10,7 +11,15 @@ type PageProps = {
   params: Promise<{ token: string }>;
 };
 
-export default async function Page({ params }: PageProps) {
+export default function Page({ params }: PageProps) {
+  return (
+    <Suspense fallback={null}>
+      <InviteContent params={params} />
+    </Suspense>
+  );
+}
+
+async function InviteContent({ params }: PageProps) {
   const { token } = await params;
   return <RecruitmentInviteView token={token} />;
 }
