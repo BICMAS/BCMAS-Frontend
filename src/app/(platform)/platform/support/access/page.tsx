@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { RoutePlaceholder } from "@/components/shared/route-placeholder";
+import { AssumedAccessView } from "@/features/platform";
 
 export const metadata: Metadata = {
   title: "Assumed Access",
 };
 
 export default function Page() {
-  return <RoutePlaceholder title="Assumed Access" />;
+  return (
+    <Suspense fallback={null}>
+      <AssumedAccessView />
+    </Suspense>
+  );
 }

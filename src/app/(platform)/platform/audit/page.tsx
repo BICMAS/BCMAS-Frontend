@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { RoutePlaceholder } from "@/components/shared/route-placeholder";
+import { PlatformAuditView } from "@/features/platform";
 
 export const metadata: Metadata = {
   title: "Platform Audit Logs",
 };
 
 export default function Page() {
-  return <RoutePlaceholder title="Platform Audit Logs" />;
+  return (
+    <Suspense fallback={null}>
+      <PlatformAuditView />
+    </Suspense>
+  );
 }

@@ -2,8 +2,9 @@ import type { NavItem } from "@/types/navigation";
 
 export function isNavItemActive(
   pathname: string,
-  item: Pick<NavItem, "href" | "matchPrefix">,
+  item: Pick<NavItem, "href" | "matchPrefix" | "exact">,
 ): boolean {
+  if (item.exact) return pathname === item.href;
   const prefix = item.matchPrefix ?? item.href;
 
   if (
@@ -27,25 +28,24 @@ export function findActiveSectionItemIds(
 ): { activeId?: string; expandIds: string[] } {
   const expandIds: string[] = [];
   let activeId: string | undefined;
+  let bestScore = -1;
+
+  const claim = (id: string, item: NavItem, parentId?: string) => {
+    if (!isNavItemActive(pathname, item)) return;
+    const score = (item.matchPrefix ?? item.href).length;
+    if (score <= bestScore) return;
+    bestScore = score;
+    activeId = id;
+    expandIds.length = 0;
+    if (parentId) expandIds.push(parentId);
+    else if (item.children?.length) expandIds.push(item.id);
+  };
 
   for (const item of items) {
     if (item.children?.length) {
-      const childHit = item.children.find((child) =>
-        isNavItemActive(pathname, child),
-      );
-      if (childHit) {
-        expandIds.push(item.id);
-        activeId = childHit.id;
-        continue;
-      }
+      for (const child of item.children) claim(child.id, child, item.id);
     }
-
-    if (isNavItemActive(pathname, item)) {
-      activeId = item.id;
-      if (item.children?.length) {
-        expandIds.push(item.id);
-      }
-    }
+    claim(item.id, item);
   }
 
   return { activeId, expandIds };

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { RoutePlaceholder } from "@/components/shared/route-placeholder";
+import { TenantDirectoryView } from "@/features/platform";
 
 export const metadata: Metadata = {
   title: "Tenant Directory",
 };
 
 export default function Page() {
-  return <RoutePlaceholder title="Tenant Directory" />;
+  return <TenantDirectoryView />;
 }

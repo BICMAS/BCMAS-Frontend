@@ -139,7 +139,7 @@ function ExpandableItem({
               item={child}
               variant={variant}
               nested
-              active={activeChildId === child.id || isNavItemActive(pathname, child)}
+              active={activeChildId === child.id}
               onNavigate={onNavigate}
             />
           ))}
@@ -230,7 +230,7 @@ export function SidebarNav({
                     item={item}
                     collapsed={collapsed}
                     variant={variant}
-                    active={isNavItemActive(pathname, item)}
+                    active={activeId === item.id}
                     onNavigate={onNavigate}
                   />
                 ),

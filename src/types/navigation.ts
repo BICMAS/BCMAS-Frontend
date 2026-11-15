@@ -11,6 +11,8 @@ export type NavItem = {
   children?: NavItem[];
   /** Match active state for nested routes */
   matchPrefix?: string;
+  /** Match only this href, not longer paths that share the prefix */
+  exact?: boolean;
   /** Hide until a screen exists (still omitted from configs that shouldn't show it) */
   disabled?: boolean;
 };

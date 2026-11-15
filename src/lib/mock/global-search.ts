@@ -3,7 +3,7 @@ export type GlobalSearchResult = {
   title: string;
   description: string;
   href: string;
-  category: "Organisation" | "Roles" | "Skills" | "Employees" | "Navigation" | "Development" | "Manager";
+  category: "Organisation" | "Roles" | "Skills" | "Employees" | "Navigation" | "Development" | "Manager" | "Platform";
 };
 
 export const globalSearchIndex: GlobalSearchResult[] = [
@@ -202,6 +202,48 @@ export const globalSearchIndex: GlobalSearchResult[] = [
     description: "Same-role comparison and readiness gaps",
     href: "/talent/insights",
     category: "Development",
+  },
+  {
+    id: "platform",
+    title: "Platform Dashboard",
+    description: "Cross-tenant usage and service health",
+    href: "/platform",
+    category: "Platform",
+  },
+  {
+    id: "platform-tenants",
+    title: "Tenant Directory",
+    description: "Subscriptions, entitlements, and tenant status",
+    href: "/platform/tenants",
+    category: "Platform",
+  },
+  {
+    id: "platform-provision",
+    title: "Provision Tenant",
+    description: "Create a new enterprise tenant",
+    href: "/platform/tenants/new",
+    category: "Platform",
+  },
+  {
+    id: "platform-support",
+    title: "Support Management",
+    description: "Customer tickets and troubleshooting",
+    href: "/platform/support",
+    category: "Platform",
+  },
+  {
+    id: "platform-access",
+    title: "Assumed Access",
+    description: "Logged support access into a tenant",
+    href: "/platform/support/access",
+    category: "Platform",
+  },
+  {
+    id: "platform-audit",
+    title: "Platform Audit",
+    description: "Provisioning and assumed-access events",
+    href: "/platform/audit",
+    category: "Platform",
   },
   {
     id: "manager-promotion",
