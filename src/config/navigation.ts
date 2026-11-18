@@ -12,21 +12,21 @@ import {
   LayoutGridIcon,
   LibraryIcon,
   LineChartIcon,
+  ListChecksIcon,
   NetworkIcon,
   ScrollTextIcon,
   SettingsIcon,
   ShieldIcon,
   ShieldUserIcon,
   SparklesIcon,
-  ListChecksIcon,
   TargetIcon,
   UserCogIcon,
   UsersIcon,
   WaypointsIcon,
 } from "lucide-react";
 
-import type { NavigationConfig } from "@/types/navigation";
 import type { UserPortal } from "@/types";
+import type { NavigationConfig } from "@/types/navigation";
 
 /**
  * Role-scoped navigation from HTML sidebars / ROUTE_MAP.
@@ -52,17 +52,17 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             matchPrefix: "/roles",
             children: [
               {
-                id: "roles-list",
-                label: "Roles Directory",
-                href: "/roles",
-                icon: NetworkIcon,
-              },
-              {
                 id: "org-overview",
                 label: "Organisation Overview",
                 href: "/org",
                 icon: Building2Icon,
                 matchPrefix: "/org",
+              },
+              {
+                id: "roles-list",
+                label: "Roles Directory",
+                href: "/roles",
+                icon: NetworkIcon,
               },
             ],
           },
@@ -101,28 +101,16 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
                 icon: UsersIcon,
               },
               {
-                id: "mapping",
-                label: "Mapping Workspace",
-                href: "/employees/mapping",
-                icon: WaypointsIcon,
-              },
-              {
                 id: "bulk-mapping",
                 label: "Bulk Mapping",
                 href: "/employees/mapping/bulk",
                 icon: ListChecksIcon,
               },
               {
-                id: "exceptions",
-                label: "Mapping Exceptions",
-                href: "/employees/mapping/exceptions",
-                icon: TargetIcon,
-              },
-              {
-                id: "import",
-                label: "Bulk Import",
-                href: "/employees/import",
-                icon: CirclePlusIcon,
+                id: "mapping",
+                label: "Mapping Workspace",
+                href: "/employees/mapping",
+                icon: WaypointsIcon,
               },
             ],
           },
@@ -135,7 +123,7 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
           },
           {
             id: "learning",
-            label: "Learning Delivery",
+            label: "Learning Library",
             href: "/learning",
             icon: GraduationCapIcon,
             matchPrefix: "/learning",
@@ -153,17 +141,17 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             icon: Building2Icon,
             matchPrefix: "/org",
             children: [
+                {
+                id: "org-chart",
+                label: "Org Chart",
+                href: "/org/chart",
+                icon: NetworkIcon,
+              },
               {
                 id: "departments",
                 label: "Departments",
                 href: "/org/departments",
                 icon: Building2Icon,
-              },
-              {
-                id: "org-chart",
-                label: "Org Chart",
-                href: "/org/chart",
-                icon: NetworkIcon,
               },
               {
                 id: "bulk-upload",

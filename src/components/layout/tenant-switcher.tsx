@@ -12,15 +12,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSessionStore } from "@/stores/session-store";
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/session-store";
 
 type TenantSwitcherProps = {
   className?: string;
   compact?: boolean;
 };
 
-export function TenantSwitcher({ className, compact = false }: TenantSwitcherProps) {
+export function TenantSwitcher({
+  className,
+  compact = false,
+}: TenantSwitcherProps) {
   const organisation = useSessionStore((s) => s.organisation);
   const organisations = useSessionStore((s) => s.organisations);
   const setOrganisationId = useSessionStore((s) => s.setOrganisationId);
@@ -40,9 +43,7 @@ export function TenantSwitcher({ className, compact = false }: TenantSwitcherPro
         }
       >
         <Building2Icon className="size-3.5 text-slate-400" aria-hidden />
-        <span className="max-w-[160px] truncate text-xs">
-          {organisation.name}
-        </span>
+        <span className="max-w-40 truncate text-xs">{organisation.name}</span>
         <ChevronDownIcon className="size-2.5 text-slate-400" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-56">

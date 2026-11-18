@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { PlusIcon, UploadIcon } from "lucide-react";
+import Link from "next/link";
 
 import { PageHeader } from "@/components/shared/page-header";
 import {
@@ -27,7 +27,7 @@ export async function OrgOverviewView() {
         description="Centralized management of organizational structure, departments, and role-based capability health."
         breadcrumbs={
           <Breadcrumb>
-            <BreadcrumbList className="text-[11px] font-bold tracking-[0.1em] text-slate-400 uppercase">
+            <BreadcrumbList className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">
               <BreadcrumbItem>
                 <span>Organization Hub</span>
               </BreadcrumbItem>

@@ -1,11 +1,11 @@
 "use client";
 
-import { StatusIndicator } from "@/components/shared/status-indicator";
 import { DevRoleSwitcher } from "@/components/layout/dev-role-switcher";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { TenantSwitcher } from "@/components/layout/tenant-switcher";
-import type { NavigationConfig } from "@/types/navigation";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import { cn } from "@/lib/utils";
+import type { NavigationConfig } from "@/types/navigation";
 
 type AppSidebarProps = {
   navigation: NavigationConfig;
@@ -33,7 +33,7 @@ export function AppSidebar({
         isPlatform
           ? "border-white/5 bg-navy text-white/70"
           : "border-border-slate bg-white",
-        collapsed ? "w-16" : "w-[var(--sidebar-width)]",
+        collapsed ? "w-16" : "w-[--sidebar-width]",
         className,
       )}
       aria-label="Primary"
