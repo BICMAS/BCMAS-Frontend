@@ -14,6 +14,7 @@ type UseListQueryOptions<T> = {
   searchKeys: Array<keyof T | ((row: T) => string)>;
   initialPageSize?: number;
   initialSort?: ListSort;
+  initialFilters?: Record<string, string>;
   filterFn?: (row: T, filters: Record<string, string>) => boolean;
   getSortValue?: (row: T, sortId: string) => string | number | null | undefined;
 };
@@ -35,11 +36,14 @@ export function useListQuery<T>({
   searchKeys,
   initialPageSize = 8,
   initialSort,
+  initialFilters,
   filterFn,
   getSortValue,
 }: UseListQueryOptions<T>) {
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Record<string, string>>(
+    initialFilters ?? {},
+  );
   const [sort, setSort] = useState<ListSort | undefined>(initialSort);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(initialPageSize);

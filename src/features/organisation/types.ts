@@ -11,7 +11,9 @@ export type OrgMetric = {
   label: string;
   value: string;
   tone?: "default" | "success" | "warning";
-  icon: "sitemap" | "badge" | "check" | "clock" | "users";
+  icon: "sitemap" | "badge" | "check" | "clock" | "users" | "draft";
+  /** Page that holds the source data behind this metric. */
+  href?: string;
 };
 
 export type ProfileDistributionBar = {

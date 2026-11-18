@@ -20,11 +20,20 @@ import { cn } from "@/lib/utils";
 export async function OrgOverviewView() {
   const data = await getOrgOverview();
 
+  const metric = (id: string) =>
+    data.metrics.find((m) => m.id === id)?.value ?? "0";
+
+  const title = data.organisationName
+    ? `${data.organisationName}`
+    : "Organisation Overview";
+
+  const description = `${metric("departments")} departments, ${metric("roles")} roles and ${metric("employees")} employees`;
+
   return (
     <div className="space-y-10">
       <PageHeader
-        title="Organisation Overview"
-        description="Centralized management of organizational structure, departments, and role-based capability health."
+        title={title}
+        description={description}
         breadcrumbs={
           <Breadcrumb>
             <BreadcrumbList className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">

@@ -8,23 +8,43 @@ import type {
 export const mockOrgOverview: OrgOverviewData = {
   organisationName: "Global Enterprise Corp",
   metrics: [
-    { id: "departments", label: "Departments", value: "12", icon: "sitemap" },
-    { id: "roles", label: "Total Roles", value: "148", icon: "badge" },
+    {
+      id: "departments",
+      label: "Total Departments",
+      value: "12",
+      icon: "sitemap",
+      href: "/org/departments",
+    },
+    {
+      id: "roles",
+      label: "Total Defined Roles",
+      value: "148",
+      icon: "badge",
+      href: "/roles",
+    },
     {
       id: "approved",
-      label: "Approved Profiles",
+      label: "Approved Role Skill Profile",
       value: "112",
       tone: "success",
       icon: "check",
+      href: "/roles?status=approved",
     },
     {
       id: "pending",
-      label: "Pending Profiles",
+      label: "Roles Profile Awaiting Approval",
       value: "36",
       tone: "warning",
       icon: "clock",
+      href: "/roles?status=awaiting_review",
     },
-    { id: "employees", label: "Total Employees", value: "2,450", icon: "users" },
+    {
+      id: "employees",
+      label: "Total Workforce",
+      value: "2,450",
+      icon: "users",
+      href: "/employees",
+    },
   ],
   distribution: [
     {

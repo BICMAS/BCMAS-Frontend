@@ -25,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { OrgMetricCard } from "@/features/organisation/components/org-metric-card";
+import type { OrgMetric } from "@/features/organisation/types";
 import { CreateRoleDialog } from "@/features/roles/components/create-role-dialog";
 import { RoleStatusBadge } from "@/features/roles/components/role-status-badge";
 import { deactivateRole } from "@/features/roles/services/mock-roles";
@@ -32,11 +34,24 @@ import type { RoleRecord } from "@/features/roles/types";
 import { useListQuery } from "@/hooks/use-list-query";
 import { cn } from "@/lib/utils";
 
-type RolesDirectoryViewProps = {
-  initialRoles: RoleRecord[];
+/** Status filter value applied when each summary card is clicked. */
+const METRIC_STATUS_FILTER: Record<string, string> = {
+  total: "all",
+  approved: "approved,published",
+  awaiting: "awaiting_review",
+  unprofiled: "draft",
 };
 
-export function RolesDirectoryView({ initialRoles }: RolesDirectoryViewProps) {
+type RolesDirectoryViewProps = {
+  initialRoles: RoleRecord[];
+  /** Pre-selected status filter, e.g. from `/roles?status=approved`. */
+  initialStatus?: string;
+};
+
+export function RolesDirectoryView({
+  initialRoles,
+  initialStatus,
+}: RolesDirectoryViewProps) {
   const router = useRouter();
   const [roles, setRoles] = useState(initialRoles);
   const [view, setView] = useState<"table" | "grid">("table");
@@ -45,16 +60,51 @@ export function RolesDirectoryView({ initialRoles }: RolesDirectoryViewProps) {
     null,
   );
 
+  const summaryMetrics = useMemo<OrgMetric[]>(() => {
+    const count = (predicate: (role: RoleRecord) => boolean) =>
+      String(roles.filter(predicate).length);
+    return [
+      {
+        id: "total",
+        label: "Total Defined Roles",
+        value: String(roles.length),
+        icon: "badge",
+      },
+      {
+        id: "approved",
+        label: "Approved Skills Profiles",
+        value: count((r) => r.status === "approved" || r.status === "published"),
+        icon: "check",
+        tone: "success",
+      },
+      {
+        id: "awaiting",
+        label: "Awaiting Review",
+        value: count((r) => r.status === "awaiting_review"),
+        icon: "clock",
+        tone: "warning",
+      },
+      {
+        id: "unprofiled",
+        label: "Not Yet Profiled",
+        value: count((r) => r.status === "draft"),
+        icon: "draft",
+      },
+    ];
+  }, [roles]);
+
   const list = useListQuery({
     data: roles,
     searchKeys: ["title", "departmentName"],
     initialSort: { id: "title", direction: "asc" },
+    initialFilters: initialStatus ? { status: initialStatus } : undefined,
     filterFn: (row, filters) => {
       if (filters.department && filters.department !== "all") {
         if (row.departmentId !== filters.department) return false;
       }
       if (filters.status && filters.status !== "all") {
-        if (row.status !== filters.status) return false;
+        // Supports comma-separated values, e.g. "approved,published".
+        if (!filters.status.split(",").includes(row.status)) return false;
       }
       return true;
     },
@@ -162,6 +212,27 @@ export function RolesDirectoryView({ initialRoles }: RolesDirectoryViewProps) {
         }
       />
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {summaryMetrics.map((metric) => {
+          const filterValue = METRIC_STATUS_FILTER[metric.id] ?? "all";
+          const current = list.filters.status ?? "all";
+          return (
+            <OrgMetricCard
+              key={metric.id}
+              metric={metric}
+              active={current === filterValue}
+              onClick={() =>
+                list.setFilter(
+                  "status",
+                  // Clicking an active status card clears the filter.
+                  current === filterValue ? "all" : filterValue,
+                )
+              }
+            />
+          );
+        })}
+      </div>
+
       <FilterBar
         search={
           <SearchField
@@ -173,7 +244,7 @@ export function RolesDirectoryView({ initialRoles }: RolesDirectoryViewProps) {
         filters={
           <>
             <select
-              className="h-10 min-w-[160px] rounded-lg border border-border-slate bg-slate-50 px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-navy"
+              className="h-10 min-w-40 rounded-lg border border-border-slate bg-slate-50 px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-navy"
               value={list.filters.department ?? "all"}
               onChange={(e) => list.setFilter("department", e.target.value)}
             >
@@ -183,13 +254,14 @@ export function RolesDirectoryView({ initialRoles }: RolesDirectoryViewProps) {
               <option value="finance">Finance</option>
             </select>
             <select
-              className="h-10 min-w-[160px] rounded-lg border border-border-slate bg-slate-50 px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-navy"
+              className="h-10 min-w-40 rounded-lg border border-border-slate bg-slate-50 px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-navy"
               value={list.filters.status ?? "all"}
               onChange={(e) => list.setFilter("status", e.target.value)}
             >
               <option value="all">All Statuses</option>
               <option value="draft">Draft</option>
               <option value="awaiting_review">Awaiting Review</option>
+              <option value="approved,published">Approved &amp; Published</option>
               <option value="approved">Approved</option>
               <option value="changes_requested">Changes Requested</option>
               <option value="published">Published</option>
