@@ -12,6 +12,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SearchField } from "@/components/shared/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { OrgMetricCard } from "@/features/organisation/components/org-metric-card";
+import type { OrgMetric } from "@/features/organisation/types";
 import { duplicateSkill } from "@/features/skills/services/mock-skills";
 import type { SkillRecord } from "@/features/skills/types";
 import { useListQuery } from "@/hooks/use-list-query";
@@ -48,11 +50,28 @@ export function SkillsLibraryView({ initialSkills }: SkillsLibraryViewProps) {
     },
     getSortValue: (row, id) => {
       if (id === "roleUsage") return row.roleUsage;
-      if (id === "levelsDefined") return row.levelsDefined;
+      if (id === "requiredLevels") return row.requiredLevels?.max ?? 0;
+      if (id === "employeesRequiring") return row.employeesRequiring;
       if (id === "name") return row.name;
       return null;
     },
   });
+
+  const summary = useMemo<{ metric: OrgMetric; status: string }[]>(() => {
+    const count = (status: SkillRecord["status"]) => String(skills.filter((s) => s.status === status).length);
+    return [
+      { metric: { id: "total", label: "Total Skills Identified", value: String(skills.length), icon: "badge" }, status: "all" },
+      {
+        metric: { id: "approved", label: "Approved Skills", value: count("published"), icon: "check", tone: "success" },
+        status: "published",
+      },
+      {
+        metric: { id: "awaiting", label: "Awaiting Review", value: count("awaiting_review"), icon: "clock", tone: "warning" },
+        status: "awaiting_review",
+      },
+      { metric: { id: "draft", label: "Draft Skills", value: count("draft"), icon: "draft" }, status: "draft" },
+    ];
+  }, [skills]);
 
   const columns = useMemo<DataTableColumn<SkillRecord>[]>(
     () => [
@@ -88,14 +107,22 @@ export function SkillsLibraryView({ initialSkills }: SkillsLibraryViewProps) {
         ),
       },
       {
-        id: "levelsDefined",
-        header: "Levels Defined",
+        id: "requiredLevels",
+        header: "Proficiency Level",
         sortable: true,
-        cell: (row) => (
-          <span className="font-medium">
-            {row.levelsDefined} / {row.levelsTotal}
-          </span>
-        ),
+        cell: (row) =>
+          row.requiredLevels ? (
+            <span
+              className="font-medium"
+              title={`Roles require level ${row.requiredLevels.min} to level ${row.requiredLevels.max}`}
+            >
+              {row.requiredLevels.min === row.requiredLevels.max
+                ? `Level ${row.requiredLevels.min}`
+                : `Level ${row.requiredLevels.min}–${row.requiredLevels.max}`}
+            </span>
+          ) : (
+            <span className="text-xs text-slate-400">Not set</span>
+          ),
       },
       {
         id: "roleUsage",
@@ -104,6 +131,12 @@ export function SkillsLibraryView({ initialSkills }: SkillsLibraryViewProps) {
         cell: (row) => (
           <span className="text-xs font-bold">{row.roleUsage} Roles</span>
         ),
+      },
+      {
+        id: "employeesRequiring",
+        header: "Employees Requiring",
+        sortable: true,
+        cell: (row) => <span className="text-xs font-bold">{row.employeesRequiring.toLocaleString("en-GB")}</span>,
       },
       {
         id: "status",
@@ -168,7 +201,18 @@ export function SkillsLibraryView({ initialSkills }: SkillsLibraryViewProps) {
     <div className="space-y-6">
       <PageHeader
         title="Skills Library"
-        description="Maintain the organisation capability framework and proficiency definitions."
+        description={
+          <>
+            <span className="block">
+              Explore and manage the skills and competencies identified by BCMS as essential for effective
+              performance across your organisation.
+            </span>
+            <span className="mt-1 block text-sm">
+              AI-generated recommendations should be reviewed and validated before becoming part of the
+              organisation&apos;s approved skills framework.
+            </span>
+          </>
+        }
         actions={
           <>
             <Link
@@ -193,14 +237,32 @@ export function SkillsLibraryView({ initialSkills }: SkillsLibraryViewProps) {
         }
       />
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {summary.map(({ metric, status }) => {
+          const current = list.filters.status ?? "all";
+          return (
+            <OrgMetricCard
+              key={metric.id}
+              metric={metric}
+              active={current === status}
+              onClick={() => {
+                setCategory("all");
+                list.setFilter("status", current === status && status !== "all" ? "all" : status);
+              }}
+            />
+          );
+        })}
+      </div>
+
       <div className="flex flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h4 className="text-sm font-bold text-amber-900">
             Potential Duplicates Detected
           </h4>
           <p className="mt-1 text-xs text-amber-700">
-            Our AI identified 3 new skills that may overlap with existing
-            definitions. Review these to maintain framework integrity.
+            BCMS has identified 3 skills that may overlap with existing
+            skills in your library. Review and resolve these suggestions to
+            maintain a consistent and accurate skills framework.
           </p>
         </div>
         <Button

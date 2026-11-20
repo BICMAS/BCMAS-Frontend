@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RoleDetailsCard } from "@/features/roles/components/role-details-card";
 import { RoleStatusBadge } from "@/features/roles/components/role-status-badge";
+import { useHydratedUser } from "@/features/talent/use-hydrated-user";
 import type { RoleRecord } from "@/features/roles/types";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,8 @@ type RoleDetailViewProps = {
 
 export function RoleDetailView({ role }: RoleDetailViewProps) {
   const router = useRouter();
+  const user = useHydratedUser();
+  const isOrgAdmin = user?.portal === "organisation_admin";
 
   return (
     <div className="space-y-8">
@@ -75,7 +79,8 @@ export function RoleDetailView({ role }: RoleDetailViewProps) {
           <TabsTrigger value="employees">Employees</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          {isOrgAdmin ? <RoleDetailsCard role={role} /> : null}
           <div className="rounded-xl border border-border-slate bg-white p-8 shadow-sm">
             <h3 className="mb-4 text-lg font-bold text-navy">Role Overview</h3>
             <p className="leading-relaxed text-slate-600">{role.overview}</p>

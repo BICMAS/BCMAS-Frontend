@@ -26,7 +26,23 @@ export async function OrgOverviewView() {
     ? `${data.organisationName}`
     : "Organisation Overview";
 
-  const description ="Upload organisational data, define roles and departments, and map employees to their positions.";
+  const departments = data.metrics.find((m) => m.id === "departments")?.value;
+  const summary = [data.industry, data.country, departments ? `${departments} Departments` : null]
+    .filter(Boolean)
+    .join(" | ");
+  const description = (
+    <>
+      {summary ? (
+        <span className="block font-semibold text-navy">{summary}</span>
+      ) : null}
+      <span className="mt-1 block font-medium text-slate-600">
+        Build your organisation&apos;s structure to establish the foundation for effective capability management.
+      </span>
+      <span className="block">
+        Upload organisational data, define roles and departments, and map employees to their positions.
+      </span>
+    </>
+  );
 
   return (
     <div className="space-y-10">

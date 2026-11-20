@@ -26,6 +26,8 @@ export async function duplicateSkill(skillId: string): Promise<SkillRecord | nul
     name: `${source.name} (Copy)`,
     status: "draft",
     roleUsage: 0,
+    requiredLevels: null,
+    employeesRequiring: 0,
     usedByRoleIds: [],
   };
   skillsState = [copy, ...skillsState];

@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SparklesIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { InfoIcon, SparklesIcon, UploadIcon, UserMinusIcon, UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchField } from "@/components/shared/search-field";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,15 +18,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 import {
-  assignSuggestedRoles,
-  autoMapSuggestions,
-  finaliseAllDrafts,
-} from "@/features/employees/services/mock-mapping";
-import type {
-  BulkMappingRow,
-  MappingRoleOption,
-} from "@/features/employees/types";
+  AddEmployeeDialog,
+  BulkUploadDialog,
+  initialsAvatar,
+  PendingApprovalsPanel,
+  RemoveEmployeeDialog,
+} from "@/features/employees/components/workforce-change-dialogs";
+import { useMappingApprovals } from "@/features/employees/services/mapping-approvals";
+import { assignSuggestedRoles } from "@/features/employees/services/mock-mapping";
+import type { BulkMappingRow, MappingRoleOption } from "@/features/employees/types";
+import { useHydratedUser } from "@/features/talent/use-hydrated-user";
 import { useListQuery } from "@/hooks/use-list-query";
 
 type BulkMappingViewProps = {
@@ -37,10 +39,27 @@ type BulkMappingViewProps = {
 
 export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
   const router = useRouter();
+  const user = useHydratedUser();
   const [rows, setRows] = useState(initialRows);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
-  const [pending, setPending] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<BulkMappingRow | null>(null);
+  const changes = useMappingApprovals((s) => s.changes);
+  const submit = useMappingApprovals((s) => s.submit);
+
+  const pendingFor = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const change of changes) {
+      if (change.status === "pending" && change.employeeId) {
+        map.set(change.employeeId, change.kind === "removal" ? "Removal pending" : "Pending approval");
+      }
+    }
+    return map;
+  }, [changes]);
+
+  const departments = useMemo(() => [...new Set(rows.map((r) => r.departmentName))].sort(), [rows]);
 
   const list = useListQuery({
     data: rows,
@@ -64,6 +83,8 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
     ? Math.round(rows.reduce((sum, row) => sum + row.confidence, 0) / rows.length)
     : 0;
 
+  const submitter = user ? { id: user.id, name: user.name } : null;
+
   const columns = useMemo<DataTableColumn<BulkMappingRow>[]>(
     () => [
       {
@@ -82,9 +103,7 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
         id: "departmentName",
         header: "Department",
         sortable: true,
-        cell: (row) => (
-          <span className="text-slate-500">{row.departmentName}</span>
-        ),
+        cell: (row) => <span className="text-slate-500">{row.departmentName}</span>,
       },
       {
         id: "suggestedRoleTitle",
@@ -110,9 +129,7 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
             </div>
             <span
               className={
-                row.confidence >= 80
-                  ? "text-[10px] font-bold text-green-deep"
-                  : "text-[10px] font-bold text-amber-600"
+                row.confidence >= 80 ? "text-[10px] font-bold text-green-deep" : "text-[10px] font-bold text-amber-600"
               }
             >
               {row.confidence}%
@@ -123,32 +140,66 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
       {
         id: "status",
         header: "Mapping Status",
+        cell: (row) => {
+          const pending = pendingFor.get(row.employeeId);
+          if (pending) {
+            return (
+              <Badge variant="info" className="rounded uppercase">
+                {pending}
+              </Badge>
+            );
+          }
+          return (
+            <Badge
+              variant={row.status === "aligned" ? "success" : row.status === "draft" ? "warning" : "secondary"}
+              className="rounded uppercase"
+            >
+              {row.status}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "Actions",
         headerClassName: "text-right",
         className: "text-right",
         cell: (row) => (
-          <Badge
-            variant={
-              row.status === "aligned"
-                ? "success"
-                : row.status === "draft"
-                  ? "warning"
-                  : "secondary"
-            }
-            className="rounded uppercase"
-          >
-            {row.status}
-          </Badge>
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="hover:bg-red-50 hover:text-red-600"
+              disabled={pendingFor.has(row.employeeId)}
+              aria-label={`Remove ${row.name} from the organisation`}
+              onClick={() => setRemoveTarget(row)}
+            >
+              <UserMinusIcon className="size-4" aria-hidden />
+              Remove
+            </Button>
+          </div>
         ),
       },
     ],
-    [],
+    [pendingFor],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Bulk Mapping Tool"
-        description="Map multiple employees to roles at scale. AI will suggest the best fit based on previous assessments and CV data."
+        description={
+          <>
+            <span className="block font-medium text-slate-600">
+              Map employees to their respective organisational roles quickly and accurately.
+            </span>
+            <span className="mt-1 block text-sm">
+              Use bulk mapping to assign employees to existing roles within your organisation, validate the assignments
+              and establish the foundation for individual capability assessment.
+            </span>
+          </>
+        }
         breadcrumbs={
           <Breadcrumb>
             <BreadcrumbList>
@@ -164,54 +215,70 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
         }
         actions={
           <>
-            <Button
-              type="button"
-              disabled={pending}
-              onClick={async () => {
-                setPending(true);
-                try {
-                  const count = await autoMapSuggestions();
-                  setRows((current) =>
-                    current.map((row) =>
-                      row.status === "aligned" ? row : { ...row, status: "draft" },
-                    ),
-                  );
-                  toast.success(`Auto-mapped ${count} suggestions`);
-                } finally {
-                  setPending(false);
-                }
-              }}
-            >
-              <SparklesIcon className="size-4 text-green-lime" aria-hidden />
-              Auto-Map Suggestions
+            <Button type="button" onClick={() => setUploadOpen(true)}>
+              <UploadIcon className="size-4" aria-hidden />
+              Bulk Upload
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={pending}
-              onClick={async () => {
-                setPending(true);
-                try {
-                  const count = await finaliseAllDrafts();
-                  setRows((current) =>
-                    current.map((row) =>
-                      row.status === "draft" ? { ...row, status: "aligned" } : row,
-                    ),
-                  );
-                  toast.success(
-                    count
-                      ? `Finalised ${count} draft mappings`
-                      : "No draft mappings to finalise",
-                  );
-                } finally {
-                  setPending(false);
-                }
-              }}
-            >
-              Finalise All
+            <Button type="button" variant="secondary" onClick={() => setAddOpen(true)}>
+              <UserPlusIcon className="size-4" aria-hidden />
+              Add New Employee
             </Button>
           </>
         }
+      />
+
+      <div className="flex gap-3 rounded-xl border border-info-soft bg-info-soft/40 p-4 text-sm text-navy">
+        <InfoIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <div className="space-y-1">
+          <p>
+            <span className="font-bold">All changes are reviewed before they go live.</span> Role assignments, new
+            employees and removals are submitted for approval, and must be approved by another administrator.
+          </p>
+          <p>
+            <span className="font-bold">Employee has left the organisation?</span> Select <em>Remove</em> on their row,
+            choose the reason (for example, resigned) and their last working day, then submit it for approval.
+          </p>
+        </div>
+      </div>
+
+      <PendingApprovalsPanel
+        user={user}
+        onApplied={(change) => {
+          if (change.kind === "mapping" && change.employeeId && change.payload.roleId) {
+            void assignSuggestedRoles([change.employeeId], change.payload.roleId, change.payload.roleTitle ?? "");
+            setRows((current) =>
+              current.map((row) =>
+                row.employeeId === change.employeeId
+                  ? {
+                      ...row,
+                      suggestedRoleId: change.payload.roleId!,
+                      suggestedRoleTitle: change.payload.roleTitle ?? row.suggestedRoleTitle,
+                      status: "aligned",
+                      confidence: Math.max(row.confidence, 90),
+                    }
+                  : row,
+              ),
+            );
+          } else if (change.kind === "removal" && change.employeeId) {
+            setRows((current) => current.filter((row) => row.employeeId !== change.employeeId));
+          } else if (change.kind === "new_employee") {
+            const id = change.payload.employeeCode ?? change.id;
+            setRows((current) => [
+              {
+                id: `row-${id}`,
+                employeeId: id,
+                name: change.employeeName,
+                avatarUrl: initialsAvatar(change.employeeName),
+                departmentName: change.payload.departmentName ?? "",
+                suggestedRoleId: change.payload.roleId ?? "",
+                suggestedRoleTitle: change.payload.roleTitle ?? "",
+                confidence: 100,
+                status: "aligned",
+              },
+              ...current,
+            ]);
+          }
+        }}
       />
 
       <div className="flex flex-col gap-4 rounded-xl border border-border-slate bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
@@ -235,38 +302,26 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
             type="button"
             size="sm"
             variant="secondary"
-            disabled={pending || selectedIds.length === 0}
-            onClick={async () => {
+            disabled={selectedIds.length === 0 || !submitter}
+            onClick={() => {
               const role = roles.find((item) => item.id === roleId);
-              if (!role) return;
-              setPending(true);
-              try {
-                const count = await assignSuggestedRoles(
-                  selectedIds,
-                  role.id,
-                  role.title,
-                );
-                setRows((current) =>
-                  current.map((row) =>
-                    selectedIds.includes(row.employeeId)
-                      ? {
-                          ...row,
-                          suggestedRoleId: role.id,
-                          suggestedRoleTitle: role.title,
-                          status: "aligned",
-                          confidence: Math.max(row.confidence, 90),
-                        }
-                      : row,
-                  ),
-                );
-                setSelectedIds([]);
-                toast.success(`Assigned ${role.title} to ${count} employees`);
-              } finally {
-                setPending(false);
+              if (!role || !submitter) return;
+              const targets = rows.filter((r) => selectedIds.includes(r.employeeId) && !pendingFor.has(r.employeeId));
+              for (const row of targets) {
+                submit({
+                  kind: "mapping",
+                  employeeId: row.employeeId,
+                  employeeName: row.name,
+                  summary: `Assign role: ${role.title}`,
+                  submittedBy: submitter,
+                  payload: { roleId: role.id, roleTitle: role.title, departmentName: row.departmentName },
+                });
               }
+              setSelectedIds([]);
+              toast.success(`Submitted ${targets.length} role assignment(s) for approval`);
             }}
           >
-            Assign to selected
+            Submit for approval
           </Button>
           <SearchField
             placeholder="Search employees…"
@@ -301,15 +356,13 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
         onSelectionChange={setSelectedIds}
         sort={list.sort}
         onSortChange={list.toggleSort}
-        onRowClick={(row) =>
-          router.push(`/employees/mapping?employee=${row.employeeId}`)
-        }
+        onRowClick={(row) => router.push(`/employees/mapping?employee=${row.employeeId}`)}
         pageIndex={list.pageIndex}
         pageCount={list.pageCount}
         onPreviousPage={() => list.setPageIndex(list.pageIndex - 1)}
         onNextPage={() => list.setPageIndex(list.pageIndex + 1)}
-        totalLabel={`${list.total} suggestions`}
-        emptyMessage="No mapping suggestions match these filters."
+        totalLabel={`${list.total} employees`}
+        emptyMessage="No employees match these filters."
       />
 
       <p className="text-xs text-slate-500">
@@ -317,8 +370,30 @@ export function BulkMappingView({ initialRows, roles }: BulkMappingViewProps) {
         <Link href="/employees/mapping" className="font-bold text-navy underline">
           mapping workspace
         </Link>{" "}
-        to review gaps before finalising.
+        to compare their current and required skills before submitting.
       </p>
+
+      <BulkUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        roles={roles}
+        submitter={submitter}
+        onSubmitted={(count) => toast.success(`${count} employee record(s) submitted for approval`)}
+      />
+      <AddEmployeeDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        roles={roles}
+        departments={departments}
+        submitter={submitter}
+      />
+      <RemoveEmployeeDialog
+        row={removeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+        submitter={submitter}
+      />
     </div>
   );
 }

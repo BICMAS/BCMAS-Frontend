@@ -75,4 +75,7 @@ export type OrgOverviewData = {
   distribution: ProfileDistributionBar[];
   structureHealth: StructureHealthMetric[];
   organisationName: string;
+  /** One-line organisation summary shown under the name (SaaS tenant identity). */
+  industry: string;
+  country: string;
 };

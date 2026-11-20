@@ -4,3 +4,4 @@ export { IndividualAssessmentView } from "@/features/ld/components/individual-as
 export { LdDashboardView } from "@/features/ld/components/ld-dashboard-view";
 export { LearningCatalogueView } from "@/features/ld/components/learning-catalogue-view";
 export { TeamMatrixView } from "@/features/ld/components/team-matrix-view";
+export { TrainingPlanView } from "./components/training-plan-view";

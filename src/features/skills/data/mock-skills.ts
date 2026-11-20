@@ -10,6 +10,8 @@ export const mockSkills: SkillRecord[] = [
     levelsDefined: 5,
     levelsTotal: 5,
     roleUsage: 12,
+    requiredLevels: { min: 3, max: 5 },
+    employeesRequiring: 64,
     status: "published",
     usedByRoleIds: ["role-ssa"],
     levels: [
@@ -22,13 +24,13 @@ export const mockSkills: SkillRecord[] = [
       {
         id: "l2",
         level: 2,
-        label: "Working",
+        label: "Developing",
         description: "Implements standard patterns with guidance.",
       },
       {
         id: "l3",
         level: 3,
-        label: "Practitioner",
+        label: "Proficient",
         description: "Designs production-ready landing zones.",
       },
       {
@@ -54,6 +56,8 @@ export const mockSkills: SkillRecord[] = [
     levelsDefined: 5,
     levelsTotal: 5,
     roleUsage: 28,
+    requiredLevels: { min: 2, max: 4 },
+    employeesRequiring: 212,
     status: "published",
     usedByRoleIds: ["role-ssa", "role-eng-lead"],
     levels: [
@@ -66,13 +70,13 @@ export const mockSkills: SkillRecord[] = [
       {
         id: "c2",
         level: 2,
-        label: "Working",
+        label: "Developing",
         description: "Adapts messaging for different audiences.",
       },
       {
         id: "c3",
         level: 3,
-        label: "Practitioner",
+        label: "Proficient",
         description: "Facilitates alignment across teams.",
       },
       {
@@ -97,6 +101,8 @@ export const mockSkills: SkillRecord[] = [
     levelsDefined: 4,
     levelsTotal: 5,
     roleUsage: 7,
+    requiredLevels: { min: 3, max: 4 },
+    employeesRequiring: 38,
     status: "awaiting_review",
     usedByRoleIds: ["role-ssa"],
     levels: [
@@ -109,13 +115,13 @@ export const mockSkills: SkillRecord[] = [
       {
         id: "m2",
         level: 2,
-        label: "Working",
+        label: "Developing",
         description: "Builds services with established patterns.",
       },
       {
         id: "m3",
         level: 3,
-        label: "Practitioner",
+        label: "Proficient",
         description: "Owns service contracts and failure modes.",
       },
       {
@@ -134,6 +140,8 @@ export const mockSkills: SkillRecord[] = [
     levelsDefined: 3,
     levelsTotal: 5,
     roleUsage: 4,
+    requiredLevels: { min: 2, max: 3 },
+    employeesRequiring: 21,
     status: "draft",
     usedByRoleIds: ["role-cyber"],
     levels: [
@@ -146,13 +154,13 @@ export const mockSkills: SkillRecord[] = [
       {
         id: "r2",
         level: 2,
-        label: "Working",
+        label: "Developing",
         description: "Maps controls to process steps.",
       },
       {
         id: "r3",
         level: 3,
-        label: "Practitioner",
+        label: "Proficient",
         description: "Advises teams on control design.",
       },
     ],
@@ -165,6 +173,8 @@ export const mockSkills: SkillRecord[] = [
     levelsDefined: 5,
     levelsTotal: 5,
     roleUsage: 9,
+    requiredLevels: { min: 3, max: 4 },
+    employeesRequiring: 47,
     status: "published",
     usedByRoleIds: ["role-lde", "role-ssa"],
     levels: [
@@ -177,13 +187,13 @@ export const mockSkills: SkillRecord[] = [
       {
         id: "d2",
         level: 2,
-        label: "Working",
+        label: "Developing",
         description: "Writes efficient queries.",
       },
       {
         id: "d3",
         level: 3,
-        label: "Practitioner",
+        label: "Proficient",
         description: "Designs schemas for scale.",
       },
       {
@@ -208,6 +218,8 @@ export const mockSkills: SkillRecord[] = [
     levelsDefined: 5,
     levelsTotal: 5,
     roleUsage: 11,
+    requiredLevels: { min: 2, max: 4 },
+    employeesRequiring: 55,
     status: "published",
     usedByRoleIds: ["role-ssa"],
     levels: [
@@ -220,13 +232,13 @@ export const mockSkills: SkillRecord[] = [
       {
         id: "k2",
         level: 2,
-        label: "Working",
+        label: "Developing",
         description: "Deploys workloads with manifests.",
       },
       {
         id: "k3",
         level: 3,
-        label: "Practitioner",
+        label: "Proficient",
         description: "Operates clusters in production.",
       },
       {
@@ -250,30 +262,45 @@ export const defaultFrameworkLevels: FrameworkLevel[] = [
     id: "fw-1",
     rank: 1,
     label: "Awareness",
-    description: "Foundational understanding of concepts.",
+    headline: "Understands the basics",
+    description:
+      "Demonstrates foundational knowledge and understanding of the skill but requires guidance to apply it.",
+    tag: "Foundation",
   },
   {
     id: "fw-2",
     rank: 2,
-    label: "Working",
-    description: "Can apply with supervision.",
+    label: "Developing",
+    headline: "Applies with supervision",
+    description:
+      "Can perform basic tasks using the skill but requires guidance, supervision or occasional support.",
+    tag: "Developing",
   },
   {
     id: "fw-3",
     rank: 3,
-    label: "Practitioner",
-    description: "Independent and consistent application.",
+    label: "Proficient",
+    headline: "Works independently",
+    description:
+      "Demonstrates consistent and effective application of the skill, meeting expected performance standards independently.",
+    tag: "Independent",
   },
   {
     id: "fw-4",
     rank: 4,
     label: "Advanced",
-    description: "Guides others and improves practice.",
+    headline: "Handles complexity and guides others",
+    description:
+      "Applies the skill effectively in complex situations, improves practices and supports the development of others.",
+    tag: "Advanced",
   },
   {
     id: "fw-5",
     rank: 5,
     label: "Expert",
-    description: "Sets organisational standards.",
+    headline: "Sets standards and leads expertise",
+    description:
+      "Demonstrates exceptional mastery, solves highly complex problems, establishes best practices and serves as a recognised authority who develops expertise in others.",
+    tag: "Expert",
   },
 ];

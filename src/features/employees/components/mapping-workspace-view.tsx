@@ -19,7 +19,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import type {
   EmployeeRecord,
   MappingRoleOption,
-  MappingSkillBar,
   MappingWorkspace,
 } from "@/features/employees/types";
 import {
@@ -34,59 +33,31 @@ type MappingWorkspaceViewProps = {
   workspaces: MappingWorkspace[];
 };
 
-function SkillList({
-  skills,
-  tone,
-}: {
-  skills: MappingSkillBar[];
-  tone: "verified" | "target";
-}) {
-  const target = tone === "target";
-  return (
-    <div className="space-y-4">
-      {skills.map((skill) => (
-        <div
-          key={skill.name}
-          className={cn(
-            "rounded-xl border p-4",
-            target
-              ? "border-green-100 bg-green-50"
-              : "border-border-slate bg-slate-50",
-          )}
-        >
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <span
-              className={cn(
-                "text-xs font-bold",
-                target ? "text-green-deep" : "text-navy",
-              )}
-            >
-              {skill.name}
-            </span>
-            <span
-              className={cn(
-                "rounded px-2 py-0.5 text-[9px] font-bold",
-                target ? "bg-green-lime text-navy" : "bg-navy text-white",
-              )}
-            >
-              LEVEL {skill.level}
-            </span>
-          </div>
-          <div
-            className={cn(
-              "h-1 w-full overflow-hidden rounded-full",
-              target ? "bg-green-100" : "bg-slate-200",
-            )}
-          >
-            <div
-              className={cn("h-full", target ? "bg-green-lime" : "bg-navy")}
-              style={{ width: `${skill.percent}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+type ComparisonRow = {
+  skill: string;
+  required: number;
+  assessed: number | null;
+  suggestion?: string;
+};
+
+/** Required level (role) vs assessed level (employee) for every skill the role needs. */
+function buildComparison(workspace: MappingWorkspace): ComparisonRow[] {
+  const assessed = new Map(workspace.verifiedSkills.map((s) => [s.name, s.level]));
+  const rows: ComparisonRow[] = workspace.targetSkills.map((t) => ({
+    skill: t.name,
+    required: t.level,
+    assessed: assessed.get(t.name) ?? null,
+  }));
+  for (const gap of workspace.gaps) {
+    const existing = rows.find((r) => r.skill === gap.skill);
+    if (existing) {
+      existing.assessed = gap.verifiedLevel;
+      existing.suggestion = gap.suggestion;
+    } else {
+      rows.push({ skill: gap.skill, required: gap.requiredLevel, assessed: gap.verifiedLevel, suggestion: gap.suggestion });
+    }
+  }
+  return rows;
 }
 
 export function MappingWorkspaceView({
@@ -131,6 +102,8 @@ export function MappingWorkspaceView({
     }
     return { percent: workspace.matchPercent, met: workspace.skillsMet };
   }, [roleId, workspace]);
+
+  const comparison = useMemo(() => (workspace ? buildComparison(workspace) : []), [workspace]);
 
   if (!employee || !workspace || !match) {
     return (
@@ -258,127 +231,138 @@ export function MappingWorkspaceView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-border-slate bg-white shadow-sm lg:grid-cols-3">
-        <section className="border-b border-border-slate p-8 lg:border-r lg:border-b-0">
-          <div className="mb-8 flex flex-col items-center text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={employee.avatarUrl}
-              alt=""
-              className="mb-4 size-20 rounded-2xl border-4 border-slate-50 shadow-sm"
-            />
-            <h3 className="text-lg font-bold text-navy">{employee.name}</h3>
-            <p className="text-xs font-medium tracking-widest text-slate-400 uppercase">
-              {employee.departmentName} · {employee.roleTitle ?? "Unassigned"}
-            </p>
-            <Link
-              href={`/employees/${employee.id}`}
-              className={cn(buttonVariants({ variant: "link" }), "mt-2 h-auto px-0")}
-            >
-              View profile
-            </Link>
-          </div>
-          <h4 className="mb-4 border-b border-slate-100 pb-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-            Current Verified Skills
-          </h4>
-          <SkillList skills={workspace.verifiedSkills} tone="verified" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section className="flex flex-col items-center rounded-xl border border-border-slate bg-white p-6 text-center shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={employee.avatarUrl}
+            alt=""
+            className="mb-3 size-16 rounded-2xl border-4 border-slate-50 shadow-sm"
+          />
+          <h3 className="text-lg font-bold text-navy">{employee.name}</h3>
+          <p className="text-xs font-medium tracking-widest text-slate-400 uppercase">
+            {employee.departmentName} · {employee.roleTitle ?? "Unassigned"}
+          </p>
+          <Link
+            href={`/employees/${employee.id}`}
+            className={cn(buttonVariants({ variant: "link" }), "mt-1 h-auto px-0")}
+          >
+            View profile
+          </Link>
         </section>
 
-        <section className="bg-slate-50 p-8 lg:p-10">
-          <div className="relative mb-10 rounded-2xl border border-border-slate bg-white p-8 text-center shadow-sm">
-            <p className="mb-4 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-              AI Gap Analysis Score
-            </p>
-            <div
-              className="mx-auto mb-6 grid size-32 place-items-center rounded-full"
-              style={{
-                background: `conic-gradient(var(--color-green-lime) ${match.percent}%, #e2e8f0 0)`,
-              }}
-            >
-              <div className="grid size-24 place-items-center rounded-full bg-white">
-                <div>
-                  <span className="block text-3xl leading-none font-bold text-navy">
-                    {match.percent}%
-                  </span>
-                  <span className="text-[9px] font-bold tracking-tight text-green-deep uppercase">
-                    Match
-                  </span>
-                </div>
+        <section className="rounded-xl border border-border-slate bg-white p-6 text-center shadow-sm">
+          <p className="mb-3 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+            AI Gap Analysis Score
+          </p>
+          <div
+            className="mx-auto mb-4 grid size-24 place-items-center rounded-full"
+            style={{
+              background: `conic-gradient(var(--color-green-lime) ${match.percent}%, #e2e8f0 0)`,
+            }}
+          >
+            <div className="grid size-18 place-items-center rounded-full bg-white">
+              <div>
+                <span className="block text-2xl leading-none font-bold text-navy">{match.percent}%</span>
+                <span className="text-[9px] font-bold tracking-tight text-green-deep uppercase">Match</span>
               </div>
             </div>
-            <p className="text-xs leading-relaxed text-slate-500">
-              {employee.name.split(" ")[0]} exceeds or meets requirements for{" "}
-              <strong>
-                {match.met} out of {workspace.skillsTotal}
-              </strong>{" "}
-              core skills identified for this role.
-            </p>
-            {savedIds.includes(employee.id) ? (
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-green-deep uppercase">
-                Progress saved
-              </p>
-            ) : null}
           </div>
-
-          <h4 className="mb-4 border-b border-slate-200 pb-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-            Identified Gaps
-          </h4>
-          {finalised || workspace.gaps.length === 0 ? (
-            <div className="flex items-start gap-3 rounded-xl border border-green-100 bg-green-50 p-4">
-              <BadgeCheckIcon className="mt-0.5 size-4 text-green-deep" />
-              <p className="text-xs font-bold text-green-deep">
-                No open gaps for this alignment.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {workspace.gaps.map((gap) => (
-                <div
-                  key={gap.skill}
-                  className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4"
-                >
-                  <TriangleAlertIcon className="mt-0.5 size-4 text-amber-500" />
-                  <div>
-                    <p className="mb-1 text-xs font-bold text-amber-900">
-                      {gap.skill}
-                    </p>
-                    <p className="text-[10px] leading-relaxed text-amber-700">
-                      Required: Level {gap.requiredLevel} | Verified: Level{" "}
-                      {gap.verifiedLevel}. Suggested action: {gap.suggestion}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p className="text-xs leading-relaxed text-slate-500">
+            {employee.name.split(" ")[0]} meets or exceeds requirements for{" "}
+            <strong>
+              {match.met} out of {workspace.skillsTotal}
+            </strong>{" "}
+            core skills identified for this role.
+          </p>
+          {savedIds.includes(employee.id) ? (
+            <p className="mt-2 text-[10px] font-bold tracking-widest text-green-deep uppercase">Progress saved</p>
+          ) : null}
         </section>
 
-        <section className="border-t border-border-slate p-8 lg:border-t-0 lg:border-l">
-          <div className="mb-8 flex flex-col items-center text-center">
-            <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-navy text-2xl font-bold text-green-lime shadow-lg">
-              ID
-            </div>
-            <h3 className="text-lg font-bold text-navy">
-              {role?.title ?? "Target role"}
-            </h3>
-            <p className="text-xs font-medium tracking-widest text-slate-400 uppercase">
-              Target Role Requirements
-            </p>
-            {role ? (
-              <Link
-                href={`/roles/${role.id}`}
-                className={cn(buttonVariants({ variant: "link" }), "mt-2 h-auto px-0")}
-              >
-                Open role
-              </Link>
-            ) : null}
+        <section className="flex flex-col items-center rounded-xl border border-border-slate bg-white p-6 text-center shadow-sm">
+          <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-navy text-xl font-bold text-green-lime shadow-lg">
+            ID
           </div>
-          <h4 className="mb-4 border-b border-slate-100 pb-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-            Target Proficiencies
-          </h4>
-          <SkillList skills={workspace.targetSkills} tone="target" />
+          <h3 className="text-lg font-bold text-navy">{role?.title ?? "Target role"}</h3>
+          <p className="text-xs font-medium tracking-widest text-slate-400 uppercase">Target Role Requirements</p>
+          {role ? (
+            <Link href={`/roles/${role.id}`} className={cn(buttonVariants({ variant: "link" }), "mt-1 h-auto px-0")}>
+              Open role
+            </Link>
+          ) : null}
         </section>
       </div>
+
+      <section
+        aria-labelledby="skills-comparison"
+        className="overflow-hidden rounded-xl border border-border-slate bg-white shadow-sm"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-slate px-6 py-4">
+          <div>
+            <h3 id="skills-comparison" className="font-bold text-navy">
+              Required vs Current Skills
+            </h3>
+            <p className="text-xs text-slate-500">
+              The skills {role?.title ?? "this role"} requires, compared with {employee.name.split(" ")[0]}&apos;s
+              assessed levels.
+            </p>
+          </div>
+          {finalised ? (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-green-deep">
+              <BadgeCheckIcon className="size-4" aria-hidden />
+              Alignment finalised
+            </span>
+          ) : null}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+              <tr>
+                <th className="px-6 py-3">Skill</th>
+                <th className="px-6 py-3 text-right">Required Level</th>
+                <th className="px-6 py-3 text-right">Assessed Level</th>
+                <th className="px-6 py-3 text-right">Gap</th>
+                <th className="px-6 py-3">Suggested Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparison.map((row) => {
+                const gap = row.assessed === null ? row.required : Math.max(0, row.required - row.assessed);
+                return (
+                  <tr key={row.skill} className="border-t border-border-slate">
+                    <td className="px-6 py-3 font-bold text-navy">{row.skill}</td>
+                    <td className="px-6 py-3 text-right">{row.required}</td>
+                    <td className="px-6 py-3 text-right">
+                      {row.assessed ?? <span className="text-xs text-slate-400">Not assessed</span>}
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <span
+                        className={cn(
+                          "inline-flex min-w-8 justify-center rounded px-2 py-0.5 text-xs font-bold",
+                          gap === 0 ? "bg-success-soft text-success-soft-foreground" : "bg-warning-soft text-warning-soft-foreground",
+                        )}
+                      >
+                        {gap}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-xs text-slate-600">
+                      {gap === 0 ? (
+                        <span className="text-slate-400">Meets requirement</span>
+                      ) : (
+                        <span className="inline-flex items-start gap-1.5">
+                          <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0 text-amber-500" aria-hidden />
+                          {row.suggestion ?? "Plan development to reach the required level."}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

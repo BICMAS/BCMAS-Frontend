@@ -28,7 +28,10 @@ import {
 import { OrgMetricCard } from "@/features/organisation/components/org-metric-card";
 import type { OrgMetric } from "@/features/organisation/types";
 import { CreateRoleDialog } from "@/features/roles/components/create-role-dialog";
-import { RoleStatusBadge } from "@/features/roles/components/role-status-badge";
+import { RoleEmployeesDialog } from "@/features/roles/components/role-employees-dialog";
+import { skillCoverage } from "@/features/roles/data/role-insights";
+import { useHydratedUser } from "@/features/talent/use-hydrated-user";
+import { ProfileStatusLegend, RoleStatusBadge } from "@/features/roles/components/role-status-badge";
 import { deactivateRole } from "@/features/roles/services/mock-roles";
 import type { RoleRecord } from "@/features/roles/types";
 import { useListQuery } from "@/hooks/use-list-query";
@@ -59,6 +62,10 @@ export function RolesDirectoryView({
   const [deactivateTarget, setDeactivateTarget] = useState<RoleRecord | null>(
     null,
   );
+  const [employeesRole, setEmployeesRole] = useState<RoleRecord | null>(null);
+  const user = useHydratedUser();
+  // Organisation Admin additions: skill profile coverage and who is behind each employee count.
+  const isOrgAdmin = user?.portal === "organisation_admin";
 
   const summaryMetrics = useMemo<OrgMetric[]>(() => {
     const count = (predicate: (role: RoleRecord) => boolean) =>
@@ -143,15 +150,57 @@ export function RolesDirectoryView({
         id: "employeeCount",
         header: "Employee Count",
         sortable: true,
-        cell: (row) => (
-          <span className="font-medium">{row.employeeCount}</span>
-        ),
+        cell: (row) =>
+          isOrgAdmin ? (
+            <button
+              type="button"
+              className="font-bold text-navy underline decoration-dotted underline-offset-4 hover:text-green-deep"
+              aria-label={`${row.employeeCount} employees in ${row.title}. Show who is counted`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setEmployeesRole(row);
+              }}
+            >
+              {row.employeeCount}
+            </button>
+          ) : (
+            <span className="font-medium">{row.employeeCount}</span>
+          ),
       },
       {
         id: "status",
         header: "Skills Profile Status",
-        cell: (row) => <RoleStatusBadge status={row.status} />,
+        cell: (row) => <RoleStatusBadge status={row.status} withMeaning />,
       },
+      ...(isOrgAdmin
+        ? [
+            {
+              id: "coverage",
+              header: "Skill Profile Coverage",
+              cell: (row: RoleRecord) => {
+                const coverage = skillCoverage[row.id];
+                if (!coverage) return <span className="text-xs text-slate-400">Not started</span>;
+                const percent = coverage.required ? Math.round((coverage.approved / coverage.required) * 100) : 0;
+                return (
+                  <div
+                    className="min-w-24"
+                    title={`${coverage.approved} of ${coverage.required} required skills approved`}
+                  >
+                    <span className="text-sm font-bold text-navy">
+                      {coverage.approved}/{coverage.required}
+                    </span>
+                    <div className="mt-1 h-1.5 rounded-full bg-slate-100" aria-hidden>
+                      <div
+                        className={cn("h-full rounded-full", percent === 100 ? "bg-green-lime" : "bg-amber-400")}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              },
+            } satisfies DataTableColumn<RoleRecord>,
+          ]
+        : []),
       {
         id: "updatedAt",
         header: "Last Updated",
@@ -196,14 +245,14 @@ export function RolesDirectoryView({
         ),
       },
     ],
-    [router],
+    [router, isOrgAdmin],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Roles Directory"
-        description="Define and manage organisational roles, their responsibilities and the skills and competenvoes required for effective performance."
+        description="Define and manage organisational roles, their responsibilities and the skills and competencies required for effective performance."
         actions={
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <PlusIcon className="size-4" aria-hidden />
@@ -266,6 +315,7 @@ export function RolesDirectoryView({
               <option value="changes_requested">Changes Requested</option>
               <option value="published">Published</option>
             </select>
+            <ProfileStatusLegend />
           </>
         }
         actions={
@@ -319,7 +369,7 @@ export function RolesDirectoryView({
             >
               <div className="mb-3 flex items-start justify-between gap-2">
                 <h3 className="font-bold text-navy">{role.title}</h3>
-                <RoleStatusBadge status={role.status} />
+                <RoleStatusBadge status={role.status} withMeaning />
               </div>
               <p className="text-sm text-slate-500">{role.departmentName}</p>
               <p className="mt-4 text-xs font-bold text-slate-400 uppercase">
@@ -334,6 +384,13 @@ export function RolesDirectoryView({
           ) : null}
         </div>
       )}
+
+      <RoleEmployeesDialog
+        role={employeesRole}
+        onOpenChange={(open) => {
+          if (!open) setEmployeesRole(null);
+        }}
+      />
 
       <CreateRoleDialog
         open={createOpen}

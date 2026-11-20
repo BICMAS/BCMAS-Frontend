@@ -243,7 +243,7 @@ export type CatalogueItem = {
   tags: string[];
   meta: string;
   action: "Assign" | "Enroll";
-  category: "gap" | "internal" | "practice" | "coaching" | "elearning";
+  category: "internal" | "practice" | "coaching" | "elearning" | "workshop";
 };
 
 export const catalogue: CatalogueItem[] = [
@@ -269,7 +269,7 @@ export const catalogue: CatalogueItem[] = [
     tags: ["Influence (L3-5)", "Leadership"],
     meta: "15 Nov Session",
     action: "Enroll",
-    category: "internal",
+    category: "workshop",
   },
   {
     id: "asset-cloud",

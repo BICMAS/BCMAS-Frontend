@@ -7,6 +7,8 @@ import type {
 
 export const mockOrgOverview: OrgOverviewData = {
   organisationName: "Global Enterprise Corp",
+  industry: "Manufacturing & Distribution",
+  country: "Nigeria",
   metrics: [
     {
       id: "departments",
@@ -24,11 +26,11 @@ export const mockOrgOverview: OrgOverviewData = {
     },
     {
       id: "approved",
-      label: "Approved Role Skill Profile",
+      label: "Approved Role Skills Profile",
       value: "112",
       tone: "success",
       icon: "check",
-      href: "/roles?status=approved",
+      href: "/roles?status=approved,published",
     },
     {
       id: "pending",

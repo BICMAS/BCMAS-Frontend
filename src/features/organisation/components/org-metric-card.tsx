@@ -82,7 +82,7 @@ export function OrgMetricCard({
         className={cardClassName}
         onClick={onClick}
         aria-pressed={active}
-        aria-label={`${metric.label}: ${metric.value}. Filter roles`}
+        aria-label={`${metric.label}: ${metric.value}. Filter the list`}
       >
         {content}
       </button>

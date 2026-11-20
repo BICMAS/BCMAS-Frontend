@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createCycle, listCycles } from "@/features/workforce/mock-workforce";
+import { AssessmentFrequencyPanel } from "@/features/ld/components/assessment-frequency-panel";
+import { DepartmentPerformanceChart } from "@/features/ld/components/department-performance-chart";
 
 export function AssessmentCyclesView() {
   const [cycles, setCycles] = useState(() => listCycles());
@@ -114,6 +116,10 @@ export function AssessmentCyclesView() {
           </Link>
         </div>
       </section>
+
+      <AssessmentFrequencyPanel />
+
+      <DepartmentPerformanceChart />
 
       <section className="overflow-hidden rounded-xl border border-border-slate bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-border-slate px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
