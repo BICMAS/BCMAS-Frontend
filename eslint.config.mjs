@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "reference-html/**",
     "documentation/**",
+    // Python AI service (its .venv contains third-party JS files).
+    "ai-service/**",
   ]),
 ]);
 

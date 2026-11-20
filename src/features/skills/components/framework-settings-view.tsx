@@ -74,7 +74,7 @@ export function FrameworkSettingsView({
     <div className="space-y-8">
       <PageHeader
         title="Framework Settings"
-        description="Configure the organisation proficiency scale used across skills and role profiles."
+        description="Define the proficiency levels used to measure skill and competency requirements across your organisation"
         actions={
           <>
             <Button
@@ -103,7 +103,7 @@ export function FrameworkSettingsView({
           >
             <div>
               <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                Rank
+                Level
               </p>
               <p className="text-2xl font-bold text-navy">{level.rank}</p>
             </div>
@@ -123,13 +123,14 @@ export function FrameworkSettingsView({
                 Description
               </label>
               <Textarea
-                rows={2}
+                rows={1}
                 value={level.description}
                 onChange={(e) =>
                   updateLevel(level.id, { description: e.target.value })
                 }
               />
             </div>
+           
           </div>
         ))}
       </div>

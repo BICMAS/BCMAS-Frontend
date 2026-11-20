@@ -1,0 +1,396 @@
+# CFP AI Service — Backend Endpoint Registry
+#
+# STATUS: every endpoint below is PROPOSED and REQUIRES CONFIRMATION BY THE BACKEND TEAM.
+# No backend API has been inspected: the frontend repository contains mock services only.
+#
+# This file is loaded by the AI service at startup (BackendEndpointRegistry). It is
+# the single switch that decides whether the AI service may call an endpoint:
+#
+#   proposed   identified by the AI team; not agreed            → never called
+#   confirmed  contract agreed in writing; not yet deployed      → never called
+#   mocked     served by the contract-mock (dev/test only)       → called in dev/test only
+#   available  deployed in this environment, contract tests pass → called
+#   rejected   backend team declined; alternative needed         → never called
+#
+# A capability whose REQUIRED dependency is not callable is reported "unavailable" by
+# GET /v1/capabilities; if only OPTIONAL dependencies are missing it is "degraded".
+# Status changes are made by pull request, reviewed by both teams.
+#
+# Columns: id, method, path, caller, auth, purpose, used_by (capability codes; * = all),
+#          status per environment, confirmed_by / confirmed_on / contract_ref when confirmed.
+
+version: 1
+environments: [dev, staging, prod]
+
+endpoints:
+  # ── Identity & access ────────────────────────────────────────────────────
+  - id: BE-001
+    method: GET
+    path: /.well-known/jwks.json
+    caller: ai_service
+    auth: none
+    purpose: Verify user / candidate / service JWT signatures
+    used_by: ["*"]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-002
+    method: POST
+    path: /oauth/token  # grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+    caller: ai_service
+    auth: user_token
+    purpose: Optional on-behalf-of token exchange (RFC 8693) instead of forwarding user tokens
+    used_by: ["*"]
+    status: { dev: proposed, staging: proposed, prod: proposed }
+  - id: BE-003
+    method: POST
+    path: /oauth/token  # grant_type=client_credentials
+    caller: ai_service
+    auth: none
+    purpose: Service-account token for background indexing of tenant reference data
+    used_by: [indexing]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-004
+    method: GET
+    path: /me
+    caller: ai_service
+    auth: user_token
+    purpose: Resolve user_id ↔ employee_id and roles when not present in token claims
+    used_by: ["*"]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-005
+    method: GET
+    path: /tenants/{tenant_id}/entitlements
+    caller: ai_service
+    auth: service_token
+    purpose: Tenant AI entitlements and token budget (alternative to ai_entitlements claim)
+    used_by: ["*"]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-006
+    method: POST
+    path: /talent/invites/{invite_token}/session
+    caller: frontend
+    auth: none
+    purpose: Exchange a candidate invite token for a short-lived, assessment-scoped JWT
+    used_by: [T2]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── People ───────────────────────────────────────────────────────────────
+  - id: BE-010
+    method: GET
+    path: /employees/{employee_id}
+    caller: ai_service
+    auth: user_token
+    purpose: Subject profile (name, role, department, manager)
+    used_by: [C5, C6, D1, D2, D3, D5, D6, T2]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-011
+    method: GET
+    path: /managers/{manager_id}/direct-reports
+    caller: ai_service
+    auth: user_token
+    purpose: Direct-report relation checks; team context
+    used_by: [C6, D6, T5]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-012
+    method: GET
+    path: /org/units?parent_id={unit_id}&updated_since={ts}
+    caller: ai_service
+    auth: user_token
+    purpose: Organisational structure (division / department / team hierarchy, unit managers), filtered to what the caller may see
+    used_by: [workflows, context]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── Competency framework ─────────────────────────────────────────────────
+  - id: BE-020
+    method: GET
+    path: /framework/levels
+    caller: ai_service
+    auth: user_token
+    purpose: Tenant's single proficiency scale
+    used_by: ["*"]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-021
+    method: GET
+    path: /skills?status=published&updated_since={ts}
+    caller: ai_service
+    auth: service_token
+    purpose: Index skills, levels and indicators for RAG
+    used_by: [indexing]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-022
+    method: GET
+    path: /skills/{skill_id}
+    caller: ai_service
+    auth: user_token
+    purpose: Direct lookup of a skill's level indicators (grounding)
+    used_by: [C2, C4, D2, T1, T3, T4, T5]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-023
+    method: GET
+    path: /roles/{role_id}/profile?version={version}
+    caller: ai_service
+    auth: user_token
+    purpose: Role requirements (skill_id + required level) for gap computation and rubrics
+    used_by: [C1, C3, C5, D1, D2, T1]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  - id: BE-024
+    method: GET
+    path: /roles/{role_id}
+    caller: ai_service
+    auth: user_token
+    purpose: Role record including overview and job description text (grounding for plans and assessment items)
+    used_by: [D1, T1, framework_intelligence]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-025
+    method: GET
+    path: /roles?status={status}&updated_since={ts}
+    caller: ai_service
+    auth: service_token
+    purpose: List roles (with job descriptions) for indexing and Phase-5 JD → profile workflows
+    used_by: [indexing, framework_intelligence]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-026
+    method: GET
+    path: /skills?q={text}&category={category}&status=published
+    caller: ai_service
+    auth: user_token
+    purpose: Competency dictionary search/list with the user's token (BE-021 is the service-token index feed)
+    used_by: [T1, coaching]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── Capability state ─────────────────────────────────────────────────────
+  - id: BE-030
+    method: GET
+    path: /employees/{employee_id}/capabilities
+    caller: ai_service
+    auth: user_token
+    purpose: Verified and self-assessed levels per skill
+    used_by: [C3, C5, C6, D1, D2, D3, D4, D5, D6]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-031
+    method: GET
+    path: /employees/{employee_id}/assessment-history
+    caller: ai_service
+    auth: user_token
+    purpose: Trend context for plans
+    used_by: [D1]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-032
+    method: GET
+    path: /employees/{employee_id}/performance-summary
+    caller: ai_service
+    auth: user_token
+    purpose: Authorised performance information (goal status, ratings the caller may see; withheld fields declared; no review free text)
+    used_by: [context]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── Learning ─────────────────────────────────────────────────────────────
+  - id: BE-040
+    method: GET
+    path: /learning/catalogue?updated_since={ts}&skill_id={ids}&status=active
+    caller: ai_service
+    auth: user_token  # service_token for indexing; user_token for skill-filtered reads (coaching, D3)
+    purpose: Index the learning catalogue for RAG; skill-filtered reads for learning recommendations
+    used_by: [indexing, C5, D3]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-041
+    method: GET
+    path: /learning/catalogue/{item_id}
+    caller: ai_service
+    auth: user_token
+    purpose: Validate catalogue IDs referenced in drafts
+    used_by: [C2, D1, D3, D4, D5]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-042
+    method: GET
+    path: /employees/{employee_id}/learning-records
+    caller: ai_service
+    auth: user_token
+    purpose: Avoid re-recommending completed learning; progress review
+    used_by: [D1, D3, D4]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── Development plans ────────────────────────────────────────────────────
+  - id: BE-050
+    method: GET
+    path: /development-plans?employee_id={employee_id}
+    caller: ai_service
+    auth: user_token
+    purpose: Active plans as context
+    used_by: [D1, D6]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-051
+    method: GET
+    path: /development-plans/{plan_id}
+    caller: ai_service
+    auth: user_token
+    purpose: Plan to review
+    used_by: [D4]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-052
+    method: POST
+    path: /development-plans
+    caller: frontend
+    auth: user_token
+    purpose: Commit an accepted plan / cohort draft (with source provenance)
+    used_by: [D1, D5]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-053
+    method: PATCH
+    path: /development-plans/{plan_id}
+    caller: frontend
+    auth: user_token
+    purpose: Commit an accepted plan adjustment
+    used_by: [D4]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── Talent assessment ────────────────────────────────────────────────────
+  - id: BE-060
+    method: GET
+    path: /talent/assessments/{assessment_id}
+    caller: ai_service
+    auth: user_token  # or candidate_token for T2
+    purpose: Assessment, rubric (skill_id + required level), pinned versions
+    used_by: [T2, T3, T4]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-061
+    method: GET
+    path: /talent/assessments/{assessment_id}/responses
+    caller: ai_service
+    auth: user_token
+    purpose: Submitted responses to score / summarise
+    used_by: [T3, T4]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-062
+    method: POST
+    path: /talent/assessments/{assessment_id}/responses
+    caller: ai_service
+    auth: candidate_token  # or user_token for promotion participants
+    purpose: Submit an AI role-play transcript as an assessment response (only AI-service write)
+    used_by: [T2]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-063
+    method: PATCH
+    path: /talent/assessments/{assessment_id}/rubric/{row_id}
+    caller: frontend
+    auth: user_token
+    purpose: Commit reviewer-confirmed score with score_source
+    used_by: [T3]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-064
+    method: GET
+    path: /talent/library?updated_since={ts}
+    caller: ai_service
+    auth: service_token
+    purpose: Index assessment library; avoid duplicate items
+    used_by: [indexing, T1]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-065
+    method: POST
+    path: /talent/library
+    caller: frontend
+    auth: user_token
+    purpose: Commit accepted assessment item drafts
+    used_by: [T1]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-066
+    method: GET
+    path: /talent/insights?{filters}
+    caller: ai_service
+    auth: user_token
+    purpose: Aggregates for insights Q&A
+    used_by: [T6]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-067
+    method: POST
+    path: /talent/assessments/{assessment_id}/reports
+    caller: frontend
+    auth: user_token
+    purpose: Attach an accepted AI-assisted report to the assessment record
+    used_by: [T4]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-068
+    method: GET
+    path: /talent/assessments/{assessment_id}/items
+    caller: ai_service
+    auth: user_token
+    purpose: Assessment instrument (questions, keyed SJT options, marking guides, expected indicators) for evidence-based scoring
+    used_by: [T3]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  - id: BE-069
+    method: GET
+    path: /talent/assessments/{assessment_id}/delivery
+    caller: frontend
+    auth: user_token  # or candidate_token
+    purpose: Participant view of the assessment instrument (questions, options WITHOUT keys or marking guides)
+    used_by: [frontend assessment player]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-072
+    method: GET
+    path: /me/assessments
+    caller: frontend
+    auth: user_token
+    purpose: Assessments assigned to the signed-in employee (status, due date, item count)
+    used_by: [frontend assessment player]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-073
+    method: POST
+    path: /talent/assessments/{assessment_id}/responses
+    caller: frontend
+    auth: user_token  # or candidate_token
+    purpose: Participant submits item responses (text, selected option, rating); the backend records them; the AI evaluates later (T3)
+    used_by: [frontend assessment player]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── Evidence ─────────────────────────────────────────────────────────────
+  - id: BE-070
+    method: GET
+    path: /evidence/{evidence_id}
+    caller: ai_service
+    auth: user_token
+    purpose: Evidence metadata (skill, note, file ref)
+    used_by: [T5]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-071
+    method: GET
+    path: /files/{file_id}/content
+    caller: ai_service
+    auth: user_token
+    purpose: Short-lived signed URL or stream of evidence content (read, never stored)
+    used_by: [T5]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+
+  # ── Events & integration ─────────────────────────────────────────────────
+  - id: BE-080
+    method: POST
+    path: "{AI_BASE_URL}/v1/events"  # implemented by AI service; SENDER is the backend
+    caller: backend
+    auth: hmac
+    purpose: Backend → AI domain events (index refresh, cache invalidation, erasure)
+    used_by: [indexing, D4, T3]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-081
+    method: POST
+    path: /integrations/ai/events
+    caller: ai_service
+    auth: service_token
+    purpose: AI → backend events (coaching.session.completed, ai.recommendation.available)
+    used_by: [C2, D1, D4]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-082
+    method: GET
+    path: (data contract) catalogue/library items of kind ai_coaching / ai_roleplay carry scenario_id
+    caller: ai_service
+    auth: user_token
+    purpose: Link learning catalogue and talent library items to AI scenarios
+    used_by: [C3, D1, T2]
+    status: { dev: mocked, staging: proposed, prod: proposed }
+  - id: BE-090
+    method: GET
+    path: /openapi.json
+    caller: ai_service
+    auth: none
+    purpose: Published OpenAPI 3.1 for client generation and contract tests (CI)
+    used_by: [ci]
+    status: { dev: proposed, staging: proposed, prod: proposed }

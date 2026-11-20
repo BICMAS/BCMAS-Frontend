@@ -1,0 +1,77 @@
+[project]
+name = "cfp-ai-service"
+version = "0.1.0"
+description = "CFP AI Intelligence Service — multi-agent AI layer for the Capability Framework Platform"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9,<3",
+  "pydantic-settings>=2.6",
+  "httpx>=0.27",
+  "pyjwt[crypto]>=2.9",
+  "langgraph>=1.2,<2",
+  "anthropic>=2.10,<3",
+  "openai>=3.55,<4",
+  "opentelemetry-api>=1.28",
+  "opentelemetry-sdk>=1.28",
+  "prometheus-client>=0.21",
+  "python-ulid>=3.0",
+  "pyyaml>=6.0.2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "mypy>=1.13",
+  "ruff>=0.8",
+  "types-pyyaml>=6.0.12.20261113",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cfp_ai"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-q"
+filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+# Verbatim copies of the reviewed contracts (docs/ai/contracts) — kept byte-identical.
+extend-exclude = ["src/cfp_ai/schemas/public.py", "src/cfp_ai/integrations/backend/dto.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "RUF"]
+ignore = [
+  "S101",    # assert is fine in tests and invariant checks
+  "UP046",   # explicit TypeVar generics kept for clarity alongside Pydantic generics
+  "UP047",
+  "RUF002",  # typographic characters in docstrings are intentional
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]
+# Prompt, mode and scenario content: long prose lines are intentional.
+"src/cfp_ai/agents/coaching/{modes,prompts,scenarios}.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+packages = ["cfp_ai"]
+
+[[tool.mypy.overrides]]
+module = ["langgraph.*", "prometheus_client.*", "ulid.*", "yaml.*"]
+ignore_missing_imports = true

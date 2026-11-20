@@ -121,7 +121,7 @@ export function RolesDirectoryView({
     () => [
       {
         id: "title",
-        header: "Role Name",
+        header: "Role Title",
         sortable: true,
         cell: (row) => (
           <Link
@@ -149,7 +149,7 @@ export function RolesDirectoryView({
       },
       {
         id: "status",
-        header: "Profile Status",
+        header: "Skills Profile Status",
         cell: (row) => <RoleStatusBadge status={row.status} />,
       },
       {
@@ -203,7 +203,7 @@ export function RolesDirectoryView({
     <div className="space-y-6">
       <PageHeader
         title="Roles Directory"
-        description="Manage organisational roles and AI-assisted skills profiles."
+        description="Define and manage organisational roles, their responsibilities and the skills and competenvoes required for effective performance."
         actions={
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <PlusIcon className="size-4" aria-hidden />
@@ -392,7 +392,7 @@ export function RolesDirectoryView({
           href="/org/departments"
           className={cn(buttonVariants({ variant: "link" }), "h-auto p-0")}
         >
-          Manage departments
+          Setting up your organisation? Start by defining the roles.
         </Link>
       </p>
     </div>

@@ -1,0 +1,48 @@
+# CFP AI Service — LLM route table (AI_TECHNICAL_SPEC.md §8.2)
+#
+# Agents reference route IDs; this file decides provider, model and effort.
+#   provider: default → CFP_AI_LLM_DEFAULT_PROVIDER (anthropic | openai | fake)
+#   model:    default → that provider's default model
+#               anthropic: CFP_AI_ANTHROPIC_DEFAULT_MODEL (claude-opus-5-5)
+#               openai:    CFP_AI_OPENAI_DEFAULT_MODEL (no default — must be set explicitly)
+# Changing a route's model or effort requires an eval run (AI_TECHNICAL_SPEC.md §10.2).
+
+defaults:
+  provider: default
+  model: default
+  refusal_fallback: true      # Anthropic server-side fallback on refusals
+  cache_system_prompt: true
+
+routes:
+  # Foundation / diagnostics
+  system.diagnostics:          { effort: low,    max_tokens: 2000,  timeout_s: 30 }
+  orchestrator.route:          { effort: low,    max_tokens: 2000,  timeout_s: 15 }
+  guard.classify_input:        { effort: low,    max_tokens: 512,   timeout_s: 5 }
+
+  # Coaching Agent
+  coaching.persona_turn:       { effort: low,    max_tokens: 2000,  timeout_s: 30,  stream: true }
+  coaching.observer:           { effort: low,    max_tokens: 1500,  timeout_s: 20 }
+  coaching.evaluate:           { effort: high,   max_tokens: 16000, timeout_s: 120, stream: true }
+  coaching.recommend_reason:   { effort: low,    max_tokens: 1500,  timeout_s: 10 }
+  coaching.draft_scenario:     { effort: medium, max_tokens: 8000,  timeout_s: 90 }
+  coaching.conversation_turn:  { effort: medium, max_tokens: 4000,  timeout_s: 45,  stream: true }
+  coaching.manager_brief:      { effort: medium, max_tokens: 4000,  timeout_s: 10 }
+  coaching.summarise:          { effort: low,    max_tokens: 2000,  timeout_s: 20 }
+
+  # Development Plan Agent
+  dev_plan.explain_gaps:       { effort: medium, max_tokens: 4000,  timeout_s: 10 }
+  dev_plan.recommend_learning: { effort: low,    max_tokens: 3000,  timeout_s: 10 }
+  dev_plan.generate:           { effort: high,   max_tokens: 16000, timeout_s: 180, stream: true }
+  dev_plan.cohort_batch:       { effort: high,   max_tokens: 16000, timeout_s: 21600 }
+  dev_plan.manager_recs:       { effort: medium, max_tokens: 3000,  timeout_s: 10 }
+
+  # Talent Assessment Agent
+  talent.draft_items:          { effort: high,   max_tokens: 16000, timeout_s: 180, stream: true }
+  talent.score_row:            { effort: high,   max_tokens: 6000,  timeout_s: 90 }
+  talent.report:               { effort: high,   max_tokens: 12000, timeout_s: 120, stream: true }
+  talent.evidence:             { effort: medium, max_tokens: 6000,  timeout_s: 10 }
+  talent.insights_turn:        { effort: medium, max_tokens: 6000,  timeout_s: 60,  stream: true }
+
+# Used for the cost estimate metric only (USD per million tokens). Add models as they are adopted.
+prices_per_mtok:
+  claude-opus-5-5: { input: 4.00, output: 20.00 }

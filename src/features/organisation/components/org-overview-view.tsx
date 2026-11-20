@@ -20,14 +20,13 @@ import { cn } from "@/lib/utils";
 export async function OrgOverviewView() {
   const data = await getOrgOverview();
 
-  const metric = (id: string) =>
-    data.metrics.find((m) => m.id === id)?.value ?? "0";
+ 
 
   const title = data.organisationName
     ? `${data.organisationName}`
     : "Organisation Overview";
 
-  const description = `${metric("departments")} departments, ${metric("roles")} roles and ${metric("employees")} employees`;
+  const description ="Upload organisational data, define roles and departments, and map employees to their positions.";
 
   return (
     <div className="space-y-10">
@@ -54,14 +53,14 @@ export async function OrgOverviewView() {
               className={cn(buttonVariants({ variant: "secondary" }))}
             >
               <UploadIcon className="size-4" aria-hidden />
-              Bulk Import Org
+              Upload Organisation Data
             </Link>
             <Link
               href="/org/departments?action=new"
               className={cn(buttonVariants({ variant: "default" }))}
             >
               <PlusIcon className="size-4" aria-hidden />
-              New Department
+              Add Department Manually
             </Link>
           </>
         }

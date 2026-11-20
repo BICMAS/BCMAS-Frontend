@@ -73,18 +73,19 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             icon: UserCogIcon,
             matchPrefix: "/skills",
             children: [
+               {
+                id: "skills-framework",
+                label: "Framework Settings",
+                href: "/skills/framework",
+                icon: SettingsIcon,
+              },
               {
                 id: "skills-library",
                 label: "Skills Library",
                 href: "/skills",
                 icon: LibraryIcon,
               },
-              {
-                id: "skills-framework",
-                label: "Framework Settings",
-                href: "/skills/framework",
-                icon: SettingsIcon,
-              },
+             
             ],
           },
           {
@@ -201,6 +202,25 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
                 icon: ScrollTextIcon,
               },
             ],
+          },
+        ],
+      },
+      {
+        id: "ai",
+        title: "AI",
+        items: [
+          {
+            id: "ai-centre",
+            label: "AI Capability Centre",
+            href: "/ai",
+            icon: SparklesIcon,
+          },
+          {
+            id: "ai-plans",
+            label: "AI Training Plans",
+            href: "/ai/plans",
+            icon: GraduationCapIcon,
+            matchPrefix: "/ai/plans",
           },
         ],
       },
@@ -363,6 +383,32 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
           },
         ],
       },
+      {
+        id: "ai",
+        title: "AI",
+        items: [
+          {
+            id: "ai-centre",
+            label: "AI Capability Centre",
+            href: "/ai",
+            icon: SparklesIcon,
+          },
+          {
+            id: "ai-plans",
+            label: "AI Training Plans",
+            href: "/ai/plans",
+            icon: GraduationCapIcon,
+            matchPrefix: "/ai/plans",
+          },
+          {
+            id: "ai-assessments",
+            label: "AI Talent Assessment",
+            href: "/ai/assessments",
+            icon: ClipboardCheckIcon,
+            matchPrefix: "/ai/assessments",
+          },
+        ],
+      },
     ],
     mobileTabs: [
       { id: "home", label: "Home", href: "/ld", icon: HomeIcon },
@@ -435,6 +481,32 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             href: "/insights/gaps",
             icon: TargetIcon,
             matchPrefix: "/insights/gaps",
+          },
+        ],
+      },
+      {
+        id: "ai",
+        title: "AI",
+        items: [
+          {
+            id: "ai-centre",
+            label: "AI Capability Centre",
+            href: "/ai",
+            icon: SparklesIcon,
+          },
+          {
+            id: "ai-coaching",
+            label: "AI Coaching",
+            href: "/ai/coaching",
+            icon: BotIcon,
+            matchPrefix: "/ai/coaching",
+          },
+          {
+            id: "ai-plans",
+            label: "AI Training Plans",
+            href: "/ai/plans",
+            icon: GraduationCapIcon,
+            matchPrefix: "/ai/plans",
           },
         ],
       },
@@ -529,6 +601,39 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             href: "/learning",
             icon: LibraryIcon,
             matchPrefix: "/learning",
+          },
+        ],
+      },
+      {
+        id: "ai",
+        title: "AI",
+        items: [
+          {
+            id: "ai-centre",
+            label: "AI Capability Centre",
+            href: "/ai",
+            icon: SparklesIcon,
+          },
+          {
+            id: "ai-coaching",
+            label: "AI Coaching",
+            href: "/ai/coaching",
+            icon: BotIcon,
+            matchPrefix: "/ai/coaching",
+          },
+          {
+            id: "ai-plans",
+            label: "AI Training Plans",
+            href: "/ai/plans",
+            icon: GraduationCapIcon,
+            matchPrefix: "/ai/plans",
+          },
+          {
+            id: "ai-assessments",
+            label: "AI Talent Assessment",
+            href: "/ai/assessments",
+            icon: ClipboardCheckIcon,
+            matchPrefix: "/ai/assessments",
           },
         ],
       },
