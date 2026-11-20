@@ -42,7 +42,14 @@ next-env.d.ts
 
 # documentation
 /documentation/
-/docs/
+# docs/ stays private, except the AI contract the frontend imports via `@ai/contracts`
+# (tsconfig paths). Vercel builds from git, so that one file must be committed.
+/docs/*
+!/docs/ai/
+/docs/ai/*
+!/docs/ai/contracts/
+/docs/ai/contracts/*
+!/docs/ai/contracts/ai-contracts.ts
 
 # .env
 .env*
