@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useHydratedUser } from "@/features/talent/use-hydrated-user";
 import {
   elena,
   getEvidence,
@@ -17,11 +18,31 @@ import {
 } from "@/features/workforce/mock-workforce";
 import { cn } from "@/lib/utils";
 
-const decisions: { id: EvidenceDecision; label: string; detail: string }[] = [
+type DecisionOption = { id: EvidenceDecision; label: string; detail: string };
+
+const decisions: DecisionOption[] = [
   { id: "verified", label: "Verified", detail: "Capability requirements met." },
   { id: "more_evidence", label: "More Evidence Required", detail: "Ask employee to provide more proof." },
   { id: "not_verified", label: "Not Yet Verified", detail: "Criteria not currently met." },
 ];
+
+/** Line manager wording (BCMS manager review). Other portals keep the options above. */
+const managerDecisions: DecisionOption[] = [
+  { id: "verified", label: "Verified – Requirements Met", detail: "The evidence meets the capability requirements." },
+  {
+    id: "more_evidence",
+    label: "Additional Evidence Required",
+    detail: "Ask the employee to provide further evidence.",
+  },
+  {
+    id: "not_verified",
+    label: "Not Verified – Requirements Not Met",
+    detail: "The evidence does not meet the requirements yet.",
+  },
+];
+
+const MANAGER_FEEDBACK_GUIDANCE =
+  "Provide feedback on the evidence submitted, observed strengths, areas requiring improvement and recommended next steps.";
 
 const indicators = [
   "Designs complex infrastructure solutions that satisfy business requirements for high availability and zero-trust security.",
@@ -31,6 +52,10 @@ const indicators = [
 
 export function EvidenceReviewView({ evidenceId }: { evidenceId: string }) {
   const router = useRouter();
+  const user = useHydratedUser();
+  // Managers must give feedback with every decision; other portals keep feedback optional.
+  const isManager = user?.portal === "line_manager";
+  const options = isManager ? managerDecisions : decisions;
   const initial = getEvidence(evidenceId);
   const [decision, setDecision] = useState<EvidenceDecision | "">(initial?.decision ?? "");
   const [feedback, setFeedback] = useState(initial?.feedback ?? "");
@@ -83,6 +108,10 @@ export function EvidenceReviewView({ evidenceId }: { evidenceId: string }) {
             toast.error("Choose a verification decision.");
             return;
           }
+          if (isManager && !feedback.trim()) {
+            toast.error("Feedback is required before you submit.");
+            return;
+          }
           setPending(true);
           try {
             await submitVerification(initial.id, decision, feedback);
@@ -98,7 +127,7 @@ export function EvidenceReviewView({ evidenceId }: { evidenceId: string }) {
           Review the evidence against required indicators and make a final verification decision.
         </p>
         <div className="mt-4 space-y-2">
-          {decisions.map((option) => (
+          {options.map((option) => (
             <label
               key={option.id}
               className={cn(
@@ -121,16 +150,27 @@ export function EvidenceReviewView({ evidenceId }: { evidenceId: string }) {
           ))}
         </div>
         <label className="mt-4 block text-xs font-bold tracking-widest text-slate-400 uppercase" htmlFor="feedback">
-          Feedback for Employee
+          Feedback for Employee{isManager ? <span className="text-red-600"> *</span> : null}
         </label>
+        {isManager ? (
+          <p id="feedback-guidance" className="mt-1 text-xs text-slate-500">
+            {MANAGER_FEEDBACK_GUIDANCE}
+          </p>
+        ) : null}
         <Textarea
           id="feedback"
           className="mt-2"
           value={feedback}
           onChange={(event) => setFeedback(event.target.value)}
-          placeholder="What should the employee see with this decision?"
+          placeholder={isManager ? MANAGER_FEEDBACK_GUIDANCE : "What should the employee see with this decision?"}
+          required={isManager}
+          aria-required={isManager || undefined}
+          aria-describedby={isManager ? "feedback-guidance" : undefined}
         />
-        <Button type="submit" className="mt-4" disabled={pending}>
+        {isManager && !feedback.trim() ? (
+          <p className="mt-1 text-xs text-slate-500">Feedback is required to submit your verification.</p>
+        ) : null}
+        <Button type="submit" className="mt-4" disabled={pending || (isManager && !feedback.trim())}>
           Submit Verification
         </Button>
         <p className="mt-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">Final step in cycle</p>

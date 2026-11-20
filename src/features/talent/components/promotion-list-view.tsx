@@ -52,8 +52,8 @@ export function PromotionListView() {
   if (user.portal === "employee" || user.portal === "line_manager") {
     return (
       <p className="text-sm text-slate-500">
-        Promotion administration is for HR / L&D. Open your own assignment from Promotion in the employee menu,
-        or Promotion Review in the manager menu.
+        Promotion administration is for HR / L&D.
+        {user.portal === "employee" ? " Open your own assignment from Promotion in the employee menu." : null}
       </p>
     );
   }

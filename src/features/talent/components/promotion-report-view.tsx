@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
@@ -96,11 +95,6 @@ export function PromotionReportView({ assessmentId }: { assessmentId: string }) 
         ) : (
           <p className="mt-3 text-sm text-slate-500">No manager review yet.</p>
         )}
-        {user.portal === "line_manager" ? (
-          <Link href="/manager/promotion" className="mt-4 inline-block text-sm font-bold text-navy">
-            Back to promotion review
-          </Link>
-        ) : null}
       </section>
     </div>
   );

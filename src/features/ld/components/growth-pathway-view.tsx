@@ -5,10 +5,15 @@ import { toast } from "sonner";
 
 import { FileDropzone } from "@/components/shared/file-dropzone";
 import { PageHeader } from "@/components/shared/page-header";
+import { ManagerPlanProgress } from "@/features/manager/components/manager-plan-progress";
+import { useHydratedUser } from "@/features/talent/use-hydrated-user";
 import { getGrowthPlan, getTeamMember } from "@/features/workforce/mock-workforce";
 
 export function GrowthPathwayView({ planId }: { planId: string }) {
   const plan = getGrowthPlan(planId);
+  const user = useHydratedUser();
+  // Line managers review progress; they do not upload evidence for the employee.
+  const isManager = user?.portal === "line_manager";
   const member = plan ? getTeamMember(plan.memberId) : null;
   if (!plan || !member) {
     return (
@@ -57,6 +62,9 @@ export function GrowthPathwayView({ planId }: { planId: string }) {
           </ul>
         </li>
       </ol>
+      {isManager ? (
+        <ManagerPlanProgress plan={plan} memberName={member.name} />
+      ) : (
       <section className="rounded-2xl border border-border-slate bg-white p-5">
         <h2 className="text-sm font-bold text-navy">Execution & Evidence</h2>
         <p className="mt-1 text-xs text-slate-500">Evidence of completion for {plan.owner}.</p>
@@ -71,6 +79,7 @@ export function GrowthPathwayView({ planId }: { planId: string }) {
           }}
         />
       </section>
+      )}
       <section className="rounded-2xl border border-dashed border-border-slate bg-slate-50 p-5">
         <h2 className="text-sm font-bold text-navy">8. Reassessment Outcome</h2>
         <p className="mt-2 text-sm text-slate-500">

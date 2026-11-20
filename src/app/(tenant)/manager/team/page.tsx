@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { TeamDirectoryView } from "@/features/manager";
 
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <TeamDirectoryView />;
+  // The directory reads ?focus= / ?gap= filters (from the dashboard), which needs a Suspense boundary.
+  return (
+    <Suspense>
+      <TeamDirectoryView />
+    </Suspense>
+  );
 }

@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
         destination: "/login",
         permanent: false,
       },
+      {
+        // Promotion Review was removed from the Line Manager portal (BCMS manager review).
+        source: "/manager/promotion",
+        destination: "/manager",
+        permanent: false,
+      },
     ];
   },
   cacheComponents: true,

@@ -245,13 +245,6 @@ export const globalSearchIndex: GlobalSearchResult[] = [
     href: "/platform/audit",
     category: "Platform",
   },
-  {
-    id: "manager-promotion",
-    title: "Promotion Review",
-    description: "Direct report promotion decisions",
-    href: "/manager/promotion",
-    category: "Manager",
-  },
 ];
 
 export function searchGlobalIndex(query: string, limit = 8): GlobalSearchResult[] {

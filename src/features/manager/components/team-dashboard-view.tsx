@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChevronRightIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { managerActions } from "@/features/manager/team-data";
 import { teamMembers } from "@/features/workforce/mock-workforce";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +18,15 @@ const gaps = [
   ["Stakeholder Mgmt", "-0.7 Levels", "4 Members", "High"],
 ];
 
+const summary = [
+  { label: "Team Size", value: "12", note: "Direct Reports", href: "/manager/team" },
+  { label: "Average Capability Score", value: "84%", note: "Verified", href: "/insights/gaps" },
+  { label: "Pending Verification", value: "8", note: "Action", href: "/verification/team" },
+  { label: "Growth Velocity", value: "+1.2", note: "Levels / Year", href: "/insights/gaps" },
+];
+
 export function TeamDashboardView() {
+  const router = useRouter();
   const james = teamMembers[0];
   const sarah = teamMembers[1];
 
@@ -28,14 +39,16 @@ export function TeamDashboardView() {
           </p>
         }
         title="IT Infrastructure Team"
-        description="Aggregate capability profile, skill gaps, and active development monitoring for your direct reports."
+        description="Monitor your team's capabilities, identify skill gaps and drive employee development."
         actions={
           <>
             <Button
               type="button"
               variant="secondary"
               onClick={() => {
-                const blob = new Blob(["IT Infrastructure Team\nSize 12\nMatch 84%\n"], { type: "text/plain" });
+                const blob = new Blob(["IT Infrastructure Team\nSize 12\nAverage Capability Score 84%\n"], {
+                  type: "text/plain",
+                });
                 const url = URL.createObjectURL(blob);
                 const anchor = document.createElement("a");
                 anchor.href = url;
@@ -54,19 +67,55 @@ export function TeamDashboardView() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Team Size", "12", "Direct Reports"],
-          ["Avg. Team Match", "84%", "Verified"],
-          ["Evidence Review", "8", "Action"],
-          ["Growth Velocity", "+1.2", "Levels / Year"],
-        ].map(([label, value, note]) => (
-          <div key={label} className="rounded-2xl border border-border-slate bg-white p-6">
-            <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">{label}</p>
+        {summary.map(({ label, value, note, href }) => (
+          <Link
+            key={label}
+            href={href}
+            className="group rounded-2xl border border-border-slate bg-white p-6 transition hover:border-navy hover:shadow-sm focus-visible:ring-2 focus-visible:ring-navy focus-visible:outline-none"
+          >
+            <p className="flex items-center justify-between text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+              {label}
+              <ChevronRightIcon className="size-3.5 text-slate-300 transition group-hover:text-navy" aria-hidden />
+            </p>
             <p className="mt-2 text-3xl font-bold text-navy">{value}</p>
             <p className="text-[10px] text-slate-400">{note}</p>
-          </div>
+          </Link>
         ))}
       </div>
+      <section className="rounded-2xl border border-border-slate bg-white p-6">
+        <h2 className="text-lg font-bold text-navy">Manager Action Centre</h2>
+        <p className="mt-1 text-sm text-slate-500">Pending actions that need your attention.</p>
+        <table className="mt-4 w-full text-left text-sm">
+          <thead className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+            <tr>
+              <th className="py-2">Action Required</th>
+              <th className="py-2">Pending</th>
+              <th className="py-2">
+                <span className="sr-only">Open</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {managerActions.map((item) => (
+              <tr
+                key={item.id}
+                className="cursor-pointer border-t border-border-slate hover:bg-slate-50"
+                onClick={() => router.push(item.href)}
+              >
+                <td className="py-3 font-bold text-navy">
+                  <Link href={item.href} className="hover:underline">
+                    {item.action}
+                  </Link>
+                </td>
+                <td className="text-slate-600">{item.detail}</td>
+                <td className="text-right">
+                  <ChevronRightIcon className="ml-auto size-4 text-slate-400" aria-hidden />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="rounded-2xl border border-border-slate bg-white p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
@@ -78,29 +127,42 @@ export function TeamDashboardView() {
           <table className="w-full text-left text-sm">
             <thead className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
               <tr>
-                {["Skill Domain", "Avg. Gap", "Impacted", "Priority"].map((heading) => (
-                  <th key={heading} className="py-2">
-                    {heading}
-                  </th>
-                ))}
+                {["Skill/Competency", "Avg. Proficiency Gap", "Employees Affected", "Developmental Priority"].map(
+                  (heading) => (
+                    <th key={heading} className="py-2">
+                      {heading}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
-              {gaps.map(([skill, gap, impact, priority]) => (
-                <tr key={skill} className="border-t border-border-slate">
-                  <td className="py-3 font-bold text-navy">{skill}</td>
-                  <td>{gap}</td>
-                  <td>{impact}</td>
-                  <td>
-                    <Badge variant={priority === "Critical" ? "error" : "warning"}>{priority}</Badge>
-                  </td>
-                </tr>
-              ))}
+              {gaps.map(([skill, gap, impact, priority]) => {
+                const href = `/manager/team?gap=${encodeURIComponent(skill!)}`;
+                return (
+                  <tr
+                    key={skill}
+                    className="cursor-pointer border-t border-border-slate hover:bg-slate-50"
+                    onClick={() => router.push(href)}
+                  >
+                    <td className="py-3 font-bold text-navy">
+                      <Link href={href} className="hover:underline">
+                        {skill}
+                      </Link>
+                    </td>
+                    <td>{gap}</td>
+                    <td>{impact}</td>
+                    <td>
+                      <Badge variant={priority === "Critical" ? "error" : "warning"}>{priority}</Badge>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </section>
         <section className="rounded-2xl border border-border-slate bg-white p-6">
-          <h2 className="text-xs font-bold tracking-wider text-navy uppercase">Evidence Queue · 8 New</h2>
+          <h2 className="text-xs font-bold tracking-wider text-navy uppercase">Pending Capability Verification · 8 New</h2>
           <div className="mt-4 space-y-4">
             {james ? (
               <Link href="/verification/evidence/evidence-james" className="block">

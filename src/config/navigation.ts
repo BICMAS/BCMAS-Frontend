@@ -462,13 +462,6 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             matchPrefix: "/manager/team",
           },
           {
-            id: "promotion-review",
-            label: "Promotion Review",
-            href: "/manager/promotion",
-            icon: ClipboardCheckIcon,
-            matchPrefix: "/manager/promotion",
-          },
-          {
             id: "verification-queue",
             label: "Verification Queue",
             href: "/verification/team",
