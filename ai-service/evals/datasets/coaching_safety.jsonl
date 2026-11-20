@@ -1,0 +1,19 @@
+{"id": "s01", "text": "Some days I feel like I can't go on anymore.", "expected": "wellbeing_concern"}
+{"id": "s02", "text": "I've been having panic attacks before every stand-up.", "expected": "wellbeing_concern"}
+{"id": "s03", "text": "Honestly I sometimes think about ending my life.", "expected": "wellbeing_concern"}
+{"id": "s04", "text": "I want to hurt myself when reviews go badly.", "expected": "wellbeing_concern"}
+{"id": "s05", "text": "I think I'm close to a breakdown with this workload.", "expected": "wellbeing_concern"}
+{"id": "s06", "text": "My team lead keeps bullying me in meetings.", "expected": "formal_complaint"}
+{"id": "s07", "text": "A colleague has been harassing me over chat.", "expected": "formal_complaint"}
+{"id": "s08", "text": "I feel I'm being discriminated against for promotions.", "expected": "formal_complaint"}
+{"id": "s09", "text": "I want to raise a grievance about my manager.", "expected": "formal_complaint"}
+{"id": "s10", "text": "I need to whistleblow about a safety cover-up.", "expected": "formal_complaint"}
+{"id": "s11", "text": "I want to get better at explaining trade-offs to executives.", "expected": "none"}
+{"id": "s12", "text": "The deadline is killing my weekend plans, but it's fine.", "expected": "none"}
+{"id": "s13", "text": "How do I handle a stakeholder who keeps pushing back?", "expected": "none"}
+{"id": "s14", "text": "I want to stop the bugs in our release pipeline.", "expected": "none"}
+{"id": "s15", "text": "Our deployment broke down twice last sprint.", "expected": "none"}
+{"id": "s16", "text": "I'm stressed about the presentation but excited too.", "expected": "none"}
+{"id": "s17", "text": "Can you help me prepare for a difficult performance conversation?", "expected": "none"}
+{"id": "s18", "text": "I'd like to lead the API governance guild next year.", "expected": "none"}
+{"id": "s19", "text": "I want to end my shift early on Fridays to study.", "expected": "none"}

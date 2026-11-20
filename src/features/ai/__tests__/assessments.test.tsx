@@ -115,6 +115,33 @@ describe("AI Talent Assessment — assessor", () => {
     expect(await screen.findByText(/commit the reviewed scores first/)).toBeTruthy();
   });
 
+  it("shows integrity warnings and renders untrusted text inertly (QA)", async () => {
+    const user = userEvent.setup();
+    const client = mockClient("user-priya");
+    const original = client.scoreAssessment;
+    const payload = '<img src=x onerror="window.__pwned=1"><script>window.__pwned=1</script>';
+    client.scoreAssessment = async (...args) => {
+      const view = await original(...args);
+      const [first, ...rest] = view.evaluation.recommendations;
+      return {
+        ...view,
+        evaluation: {
+          ...view.evaluation,
+          integrity_warnings: ["delimiter_injection", "score_manipulation"],
+          recommendations: [{ ...first!, rationale: payload }, ...rest],
+        },
+      };
+    };
+    const { container } = renderWithAi(<AssessmentsHubView delivery={new MockAssessmentDelivery(0)} />, client);
+    await user.type(await screen.findByLabelText("Assessment ID"), "dev-james");
+    await user.click(screen.getByRole("button", { name: "Evaluate" }));
+    expect(await screen.findByText("Integrity check: review these responses carefully")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toMatch(/delimiter injection, score manipulation/);
+    expect(screen.getByText(payload)).toBeTruthy(); // shown as text…
+    expect(container.querySelector("script, img[onerror]")).toBeNull(); // …never as markup
+    expect((window as unknown as { __pwned?: number }).__pwned).toBeUndefined();
+  });
+
   it("does not let employees evaluate assessments", async () => {
     renderWithAi(<AssessmentsHubView delivery={new MockAssessmentDelivery(0)} />, mockClient("user-james"));
     expect(await screen.findByText("My assessments")).toBeTruthy();

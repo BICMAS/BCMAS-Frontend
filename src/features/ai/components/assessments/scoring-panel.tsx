@@ -74,6 +74,16 @@ export function ScoringPanel({ view, onChange }: { view: ScoringView; onChange: 
           <AiDisclaimer>
             {evaluation.disclaimer} Scoring rule: {evaluation.scoring_rule}
           </AiDisclaimer>
+          {(evaluation.integrity_warnings ?? []).length > 0 && (
+            <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="font-medium">Integrity check: review these responses carefully</p>
+              <p>
+                Some responses contain text that looks like instructions to the AI (
+                {(evaluation.integrity_warnings ?? []).map((w) => w.replaceAll("_", " ")).join(", ")}). Scores were
+                computed only from criteria evidence, but please verify them before deciding.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
       {evaluation.recommendations.map((r) => (

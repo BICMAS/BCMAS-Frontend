@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from cfp_ai.errors import AppError
 from cfp_ai.integrations.backend.errors import BackendError
+from cfp_ai.observability.errors import report_exception
 from cfp_ai.schemas.public import ErrorDetail, ErrorEnvelope
 
 log = logging.getLogger(__name__)
@@ -65,5 +66,5 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception) -> JSONResponse:
-        log.exception("unhandled error")
+        report_exception(request.app.state.container.metrics, exc)
         return _respond(request, AppError("internal_error", internal_detail=type(exc).__name__))

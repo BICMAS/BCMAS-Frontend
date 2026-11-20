@@ -11,6 +11,7 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncIterator, Mapping
+from dataclasses import replace
 from typing import TypeVar
 
 from pydantic import BaseModel
@@ -29,11 +30,20 @@ from cfp_ai.llm.types import (
     ProviderRefusal,
     ProviderUnavailable,
 )
+from cfp_ai.llm.usage import UsageTracker
 from cfp_ai.observability.metrics import Metrics
 from cfp_ai.observability.tracing import tracer
+from cfp_ai.security.injection import UNTRUSTED_INPUT_POLICY
 
 log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
+
+
+def _harden(request: LlmRequest) -> LlmRequest:
+    """Every model call starts with the untrusted-input policy (prompt-injection defence)."""
+    if request.system_blocks and request.system_blocks[0] == UNTRUSTED_INPUT_POLICY:
+        return request
+    return replace(request, system_blocks=(UNTRUSTED_INPUT_POLICY, *request.system_blocks))
 
 
 class LlmGateway:
@@ -44,8 +54,10 @@ class LlmGateway:
         providers: Mapping[str, LlmProvider],
         metrics: Metrics,
         breaker: CircuitBreaker | None = None,
+        usage: UsageTracker | None = None,
     ) -> None:
         self._routes = routes
+        self.usage = usage or UsageTracker()
         self._providers = dict(providers)
         self._metrics = metrics
         self._breaker = breaker or CircuitBreaker(window_s=60, min_calls=20, failure_ratio=0.5, open_s=30)
@@ -80,6 +92,16 @@ class LlmGateway:
             raise AppError("ai_unavailable", internal_detail=f"circuit open {route.provider}:{route.model}")
         return route, provider
 
+    def _check_budget(self, request: LlmRequest) -> None:
+        tenant = request.metadata.get("tenant_id")
+        if tenant is None:
+            return
+        try:
+            self.usage.check(tenant)
+        except AppError:
+            self._metrics.llm_budget_rejections.labels(tenant).inc()
+            raise
+
     @staticmethod
     def _timeout(route: LlmRoute, deadline: float | None) -> float:
         if deadline is None:
@@ -103,10 +125,26 @@ class LlmGateway:
         ):
             if value:
                 m.llm_tokens.labels(route.route_id, result.model, kind).inc(value)
+        tenant = request.metadata.get("tenant_id", "unknown")
         price = self._routes.prices_per_mtok.get(result.model)
+        cost: float | None = None
         if price:
             cost = (u.input_tokens * price[0] + u.output_tokens * price[1]) / 1_000_000
-            m.llm_cost.labels(request.metadata.get("tenant_id", "unknown"), route.route_id).inc(cost)
+            m.llm_cost.labels(tenant, route.route_id).inc(cost)
+        else:
+            m.llm_unpriced_calls.labels(result.model).inc()
+        ratio = self.usage.record(
+            tenant,
+            capability=request.metadata.get("capability", route.route_id),
+            input_tokens=u.input_tokens,
+            output_tokens=u.output_tokens,
+            cache_read_tokens=u.cache_read_input_tokens,
+            cache_write_tokens=u.cache_creation_input_tokens,
+            cost_usd=cost,
+            latency_ms=result.latency_ms,
+        )
+        if ratio is not None:
+            m.llm_budget_used.labels(tenant).set(ratio)
         m.llm_calls.labels(route.route_id, route.provider, "ok").inc()
         m.llm_latency.labels(route.route_id, route.provider).observe(result.latency_ms / 1000)
         log.info(
@@ -158,7 +196,9 @@ class LlmGateway:
         deadline: float | None = None,
     ) -> LlmResult[T]:
         route, provider = self._resolve(route_id)
+        self._check_budget(request)
         timeout = self._timeout(route, deadline)
+        request = _harden(request)
         with tracer().start_as_current_span("llm.call") as span:
             span.set_attribute("llm.route_id", route.route_id)
             span.set_attribute("llm.provider", route.provider)
@@ -189,7 +229,9 @@ class LlmGateway:
         deadline: float | None = None,
     ) -> AsyncIterator[LlmStreamDelta | LlmResult[BaseModel]]:
         route, provider = self._resolve(route_id)
+        self._check_budget(request)
         timeout = self._timeout(route, deadline)
+        request = _harden(request)
         final: LlmResult[BaseModel] | None = None
         try:
             async with asyncio.timeout(timeout):

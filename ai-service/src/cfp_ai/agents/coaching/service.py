@@ -77,6 +77,7 @@ from cfp_ai.schemas.public import (
     TranscriptQuote,
     ValidationIssue,
 )
+from cfp_ai.security.injection import scan as scan_injection
 from cfp_ai.settings import Settings
 from cfp_ai.validation.structured import generate_validated
 
@@ -250,6 +251,20 @@ class CoachingService:
         if state is None or state.employee_id != principal.employee_id:
             raise AppError("not_found")
         return state
+
+    def _screen_input(self, principal: Principal, resource_type: str, resource: str, text: str) -> None:
+        """Suspected prompt injection is audited (pattern names only, never the text); the turn continues."""
+        found = scan_injection(text)
+        if found and self._deps.audit is not None:
+            self._deps.audit.record(
+                tenant_id=principal.tenant_id,
+                principal=principal,
+                action="prompt_injection_suspected",
+                resource_type=resource_type,
+                resource=resource,
+                outcome="flagged",
+                detail=",".join(found),
+            )
 
     @staticmethod
     def _deadline(seconds: float) -> float:
@@ -442,6 +457,7 @@ class CoachingService:
         state = self._own_conversation(principal, conversation_id)
         if state.status != "active":
             raise AppError("conflict", "This conversation has ended.")
+        self._screen_input(principal, "conversation", conversation_id, text)
         cached = state.turn_cache.get(client_message_id)
         if isinstance(cached, CoachingTurnResult):
             return cached
@@ -906,6 +922,7 @@ class CoachingService:
         state = self._own_session(principal, session_id)
         if state.status != "active":
             raise AppError("conflict", "This role-play has ended.")
+        self._screen_input(principal, "roleplay_session", session_id, text)
         cached = state.turn_cache.get(client_message_id)
         if cached is not None:
             yield cached

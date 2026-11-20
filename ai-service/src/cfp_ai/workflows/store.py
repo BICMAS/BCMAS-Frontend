@@ -140,6 +140,13 @@ class SqliteWorkflowStore:
     def close(self) -> None:
         self._db.close()
 
+    def ping(self) -> None:
+        """Readiness: raises if the database cannot be read and written."""
+        with self._lock:
+            self._db.execute("SELECT 1").fetchone()
+            self._db.execute("BEGIN IMMEDIATE")  # takes the write lock: the disk is writable
+            self._db.execute("ROLLBACK")
+
     def save(self, record: WorkflowRecord) -> None:
         ref = (
             f"{record.awaiting.ref_type}:{record.awaiting.ref_id}"

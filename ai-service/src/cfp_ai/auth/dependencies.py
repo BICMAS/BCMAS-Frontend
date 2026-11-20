@@ -19,6 +19,19 @@ async def get_principal(request: Request) -> Principal:
     principal: Principal = await request.app.state.container.verifier.verify(token.strip())
     tenant_id_var.set(principal.tenant_id)
     principal_hash_var.set(principal_hash(principal.subject))
+    container = request.app.state.container
+    try:
+        container.rate_limiter.check(principal)
+    except AppError:
+        container.audit.record(
+            tenant_id=principal.tenant_id,
+            principal=principal,
+            action="rate_limited",
+            resource_type="api",
+            resource=request.url.path,
+            outcome="denied",
+        )
+        raise
     return principal
 
 

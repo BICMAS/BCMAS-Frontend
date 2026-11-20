@@ -24,7 +24,10 @@ DECISION_LANGUAGE = re.compile(
 
 def input_json_block(facts: dict[str, Any]) -> str:
     """Machine-readable facts for the model, with sorted keys (prompt-cache stable)."""
-    return f"{_INPUT_OPEN}\n{json.dumps(facts, sort_keys=True, ensure_ascii=False)}\n{_INPUT_CLOSE}"
+    body = json.dumps(facts, sort_keys=True, ensure_ascii=False)
+    # Untrusted strings must not be able to close or open the data block (prompt-injection defence).
+    body = body.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    return f"{_INPUT_OPEN}\n{body}\n{_INPUT_CLOSE}"
 
 
 def extract_input_json(request: LlmRequest) -> dict[str, Any]:

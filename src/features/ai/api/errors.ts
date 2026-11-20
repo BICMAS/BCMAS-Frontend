@@ -8,6 +8,8 @@ export class AiApiError extends Error {
   readonly requestId: string | null;
   readonly backendEndpointIds: string[];
   readonly details: ErrorBody["details"];
+  /** Seconds to wait before retrying (from the Retry-After header of a 429). */
+  readonly retryAfterS: number | null;
 
   constructor(
     code: ErrorCode | "network_error",
@@ -18,6 +20,7 @@ export class AiApiError extends Error {
       requestId?: string | null;
       backendEndpointIds?: string[];
       details?: ErrorBody["details"];
+      retryAfterS?: number | null;
     } = {},
   ) {
     super(message);
@@ -28,15 +31,17 @@ export class AiApiError extends Error {
     this.requestId = options.requestId ?? null;
     this.backendEndpointIds = options.backendEndpointIds ?? [];
     this.details = options.details;
+    this.retryAfterS = options.retryAfterS ?? null;
   }
 
-  static fromBody(body: ErrorBody, status: number): AiApiError {
+  static fromBody(body: ErrorBody, status: number, retryAfterS: number | null = null): AiApiError {
     return new AiApiError(body.code, body.message, {
       status,
       retryable: body.retryable,
       requestId: body.request_id,
       backendEndpointIds: body.backend_endpoint_ids ?? [],
       details: body.details,
+      retryAfterS,
     });
   }
 }
@@ -61,6 +66,14 @@ export function describeAiError(error: unknown): { title: string; message: strin
           error.message +
           (error.backendEndpointIds.length ? ` (waiting for ${error.backendEndpointIds.join(", ")})` : ""),
         retryable: false,
+      };
+    case "rate_limited":
+      return {
+        title: "Too many requests",
+        message: `You've made a lot of AI requests in a short time. Please try again${
+          error.retryAfterS ? ` in about ${error.retryAfterS} seconds` : " shortly"
+        }.`,
+        retryable: true,
       };
     case "not_found":
       return { title: "Not found", message: error.message, retryable: false };

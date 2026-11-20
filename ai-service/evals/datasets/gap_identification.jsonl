@@ -1,0 +1,12 @@
+{"id": "met-requirement", "requirements": [["A", 4, "technical", 1.0]], "capabilities": {"A": [4, 4]}, "expected": []}
+{"id": "one-below-verified", "requirements": [["A", 4, "technical", 1.0]], "capabilities": {"A": [3, 4]}, "expected": [["A", 1, "medium"]]}
+{"id": "one-below-heavy-weight", "requirements": [["A", 4, "technical", 1.5]], "capabilities": {"A": [3, 3]}, "expected": [["A", 1, "high"]]}
+{"id": "no-capability-record", "requirements": [["A", 4, "technical", 1.0]], "capabilities": {}, "expected": [["A", 4, "critical"]]}
+{"id": "self-assessed-only", "requirements": [["A", 4, "technical", 1.0]], "capabilities": {"A": [null, 3]}, "expected": [["A", 4, "critical"]]}
+{"id": "verified-but-self-lower", "requirements": [["A", 2, "technical", 1.0]], "capabilities": {"A": [2, 1]}, "expected": [["A", 0, "low"]]}
+{"id": "exceeds-requirement", "requirements": [["A", 3, "technical", 1.0]], "capabilities": {"A": [5, null]}, "expected": []}
+{"id": "never-verified-level-1", "requirements": [["A", 1, "technical", 1.0]], "capabilities": {}, "expected": [["A", 1, "high"]]}
+{"id": "order-priority-then-category", "requirements": [["B", 4, "behavioural", 1.0], ["A", 4, "technical", 1.0], ["C", 4, "technical", 1.0]], "capabilities": {"A": [2, 2], "B": [2, 2], "C": [3, 3]}, "expected": [["A", 2, "critical"], ["B", 2, "critical"], ["C", 1, "medium"]]}
+{"id": "order-weight-desc", "requirements": [["A", 5, "technical", 1.0], ["B", 5, "technical", 2.0]], "capabilities": {"A": [2, 2], "B": [2, 2]}, "expected": [["B", 3, "critical"], ["A", 3, "critical"]]}
+{"id": "order-name-tiebreak", "requirements": [["Z", 3, "knowledge", 1.0], ["M", 3, "knowledge", 1.0]], "capabilities": {"Z": [1, 1], "M": [1, 1]}, "expected": [["M", 2, "critical"], ["Z", 2, "critical"]]}
+{"id": "mixed-role-profile", "requirements": [["A", 4, "technical", 1.5], ["B", 4, "technical", 1.0], ["C", 5, "behavioural", 1.0], ["D", 4, "technical", 1.0]], "capabilities": {"A": [4, 3], "B": [null, 2], "C": [3, 3], "D": [3, 4]}, "expected": [["B", 4, "critical"], ["C", 2, "critical"], ["D", 1, "medium"], ["A", 0, "low"]]}

@@ -1,0 +1,12 @@
+{"id": "two-levels-met-one-source", "criteria": [[3, "met", ["r1"], false], [4, "met", ["r1"], false]], "expected_score": 4, "expected_confidence": "medium"}
+{"id": "independent-sources", "criteria": [[3, "met", ["r1"], false], [4, "met", ["r1", "r2"], false]], "expected_score": 4, "expected_confidence": "high"}
+{"id": "three-quarter-coverage", "criteria": [[4, "partial", ["r1"], false], [4, "met", ["r2"], false]], "expected_score": 4, "expected_confidence": "high"}
+{"id": "half-coverage-not-enough", "criteria": [[3, "met", ["r1"], false], [4, "partial", ["r1"], false]], "expected_score": 3, "expected_confidence": "medium"}
+{"id": "lower-level-blocks", "criteria": [[2, "not_met", ["r1"], false], [3, "met", ["r1"], false]], "expected_score": null, "expected_confidence": "low"}
+{"id": "unassessed-level-skipped", "criteria": [[2, "not_evidenced", [], false], [3, "met", ["r1"], false]], "expected_score": 3, "expected_confidence": "medium"}
+{"id": "nothing-demonstrated", "criteria": [[4, "not_met", ["r1"], false], [5, "not_met", ["r1"], false]], "expected_score": null, "expected_confidence": "low"}
+{"id": "no-evidence-at-all", "criteria": [[3, "not_evidenced", [], false], [4, "not_evidenced", [], false]], "expected_score": null, "expected_confidence": "low"}
+{"id": "self-report-partial-only", "criteria": [[3, "partial", ["s1"], true]], "expected_score": null, "expected_confidence": "low"}
+{"id": "self-report-only-evidence", "criteria": [[3, "met", ["s1"], true]], "expected_score": 3, "expected_confidence": "low"}
+{"id": "full-ladder", "criteria": [[3, "met", ["r1"], false], [4, "met", ["r2"], false], [5, "met", ["r2", "r3"], false]], "expected_score": 5, "expected_confidence": "high"}
+{"id": "partially-shown-lower-level", "criteria": [[2, "partial", ["r1"], false], [3, "met", ["r1"], false]], "expected_score": 3, "expected_confidence": "medium"}

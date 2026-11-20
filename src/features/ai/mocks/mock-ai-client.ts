@@ -821,6 +821,7 @@ export class MockAiClient implements AiClient {
       objectives: ["Establish evidence-based proficiency in the role's priority competencies."],
       methods: ["behavioural_assessment", "situational_judgement", "practical_exercise"],
       scoring_rule: "Score = highest proficiency level whose criteria are at least 75% covered by evidence.",
+      integrity_warnings: [],
       recommendations,
       approval_policy: { mode: "per_item_review", approver_roles: ["hr_ld_admin"], commit_target: "backend", commit_endpoint_id: "BE-063" },
       provenance: provenance("talent.recommend_scores"),

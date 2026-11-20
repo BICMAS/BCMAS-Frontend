@@ -1,0 +1,10 @@
+# kubectl apply -k deploy/kubernetes   (after creating the cfp-ai-secrets Secret)
+# Replace REGISTRY, RELEASE, AI_HOST, IDP_HOST, API_AUDIENCE and BACKEND_HOST with an overlay.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  - pairs: { app.kubernetes.io/part-of: cfp }
+resources:
+  - deployment.yaml
+  - resources.yaml
+  - ingress.yaml

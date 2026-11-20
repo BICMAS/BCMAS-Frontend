@@ -1,0 +1,30 @@
+# CFP AI service — Ingress (DEPLOYMENT_GUIDE.md §4.3).
+#
+# Exposes ONLY the public API (/v1/...) and /healthz over TLS. /readyz and /internal/metrics stay
+# inside the cluster. /v1/_dev is never mounted in prod; /v1/admin and /v1/audit are role-checked by
+# the service. /v1/events (backend webhooks, HMAC-signed) should ideally use a separate internal
+# ingress or an allowlist of the backend's egress addresses.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cfp-ai-service
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"         # SSE streaming
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"      # long agent calls / streams
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"          # matches CFP_AI_MAX_REQUEST_BODY_BYTES
+    nginx.ingress.kubernetes.io/limit-rps: "50"                # coarse per-IP flood guard
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [AI_HOST]
+      secretName: cfp-ai-tls
+  rules:
+    - host: AI_HOST
+      http:
+        paths:
+          - path: /v1/
+            pathType: Prefix
+            backend: { service: { name: cfp-ai-service, port: { name: http } } }
+          - path: /healthz
+            pathType: Exact
+            backend: { service: { name: cfp-ai-service, port: { name: http } } }

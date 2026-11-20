@@ -45,9 +45,10 @@ next-env.d.ts
 /docs/
 
 # .env
+.env*
 .env.local
 .env
-
+.env.production.example
 
 # references
 /reference-html/

@@ -114,6 +114,15 @@ async def handle_event(container: Container, event: BackendEvent) -> None:
         suggestions = container.suggestions.erase_subject(tenant, employee)
         container.talent_results.erase_subject(tenant, employee)
         container.workflows.erase_subject(tenant, employee)
+        container.audit.record(
+            tenant_id=tenant,
+            principal=None,
+            action="subject_erased",
+            resource_type="employee",
+            resource=None,
+            outcome="completed",
+            detail=event.type,
+        )
         container.context.invalidate_subject(tenant, employee)
         log.info(
             "subject erased",

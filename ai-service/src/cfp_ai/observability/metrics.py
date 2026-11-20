@@ -32,6 +32,21 @@ class Metrics:
         self.llm_latency = Histogram(
             "ai_llm_latency_seconds", "LLM call latency", ["route", "provider"], registry=r
         )
+        self.llm_budget_used = Gauge(
+            "ai_llm_budget_used_ratio", "Share of the monthly token budget used", ["tenant"], registry=r
+        )
+        self.llm_budget_rejections = Counter(
+            "ai_llm_budget_rejections_total", "LLM calls refused by the token budget", ["tenant"], registry=r
+        )
+        self.llm_unpriced_calls = Counter(
+            "ai_llm_unpriced_calls_total", "LLM calls on a model without a price entry", ["model"], registry=r
+        )
+        self.maintenance_runs = Counter(
+            "ai_maintenance_runs_total", "Scheduled maintenance job runs", ["job", "outcome"], registry=r
+        )
+        self.unhandled_exceptions = Counter(
+            "ai_unhandled_exceptions_total", "Unhandled exceptions (bugs)", ["type"], registry=r
+        )
         self.llm_refusals = Counter(
             "ai_llm_refusals_total", "LLM refusals", ["route", "category"], registry=r
         )

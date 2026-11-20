@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from cfp_ai.llm.gateway import LlmGateway
     from cfp_ai.memory.interfaces import LearnerMemory, MessageStore
     from cfp_ai.observability.metrics import Metrics
+    from cfp_ai.security.audit import AuditLog
     from cfp_ai.tools.registry import ToolRegistry
 
 InT = TypeVar("InT", bound=BaseModel)
@@ -119,6 +120,7 @@ class AgentDeps:
     coaching_store: CoachingStore | None = None
     drafts: DraftService | None = None
     talent_results: TalentResultStore | None = None
+    audit: AuditLog | None = None
     dev_plan_approval_mode: Literal["role_approval", "user_accept"] = "role_approval"
     dev_plan_max_goals: int = 6
 

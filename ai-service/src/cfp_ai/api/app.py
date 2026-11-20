@@ -18,11 +18,24 @@ from fastapi import FastAPI
 
 from cfp_ai import __version__
 from cfp_ai.api.errors import install_error_handlers
-from cfp_ai.api.middleware import RequestContextMiddleware
-from cfp_ai.api.routes import coaching, dev_plans, drafts, events, orchestrator, system, talent, workflows
+from cfp_ai.api.middleware import BodySizeLimitMiddleware, RequestContextMiddleware
+from cfp_ai.api.routes import (
+    audit,
+    coaching,
+    dev_plans,
+    drafts,
+    events,
+    orchestrator,
+    system,
+    talent,
+    workflows,
+)
 from cfp_ai.container import Container, build_container, describe
+from cfp_ai.maintenance import Maintenance
 from cfp_ai.observability.context import set_principal_hash_key
+from cfp_ai.observability.errors import configure_error_reporting
 from cfp_ai.observability.logging import configure_logging
+from cfp_ai.observability.readiness import ReadinessChecker
 from cfp_ai.observability.tracing import configure_tracing
 from cfp_ai.settings import Settings, get_settings
 
@@ -47,10 +60,21 @@ def create_app(settings: Settings | None = None, *, container: Container | None 
         set_principal_hash_key(settings.log_hash_key.get_secret_value().encode())
     container = container or build_container(settings)
 
+    error_reporting = configure_error_reporting(settings, version=__version__)
+    readiness = ReadinessChecker(container=container, version=__version__)
+    maintenance = Maintenance(
+        jobs={"coaching_retention": container.coaching.purge_expired},
+        metrics=container.metrics,
+        interval_s=settings.maintenance_interval_s,
+    )
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        log.info("service starting", extra=describe(container))
+        log.info("service starting", extra={**describe(container), "error_reporting": error_reporting})
+        maintenance.start()
         yield
+        readiness.draining = True  # /readyz fails first so load balancers stop routing here
+        await maintenance.stop()
         await container.aclose()
         log.info("service stopped")
 
@@ -64,7 +88,10 @@ def create_app(settings: Settings | None = None, *, container: Container | None 
         openapi_url="/openapi.json" if docs else None,
     )
     app.state.container = container
+    app.state.readiness = readiness
+    app.state.maintenance = maintenance
     install_error_handlers(app)
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
     app.add_middleware(RequestContextMiddleware, metrics=container.metrics)
     app.include_router(system.router)
     app.include_router(orchestrator.router)
@@ -74,6 +101,7 @@ def create_app(settings: Settings | None = None, *, container: Container | None 
     app.include_router(drafts.router)
     app.include_router(talent.router)
     app.include_router(workflows.router)
+    app.include_router(audit.router)
     app.include_router(events.router)
     app.state.event_dedup = events.EventDeduplicator()
     if settings.env.is_local:

@@ -64,6 +64,9 @@ To use a real model, set `CFP_AI_LLM_DEFAULT_PROVIDER=anthropic` and `ANTHROPIC_
 
 ### Docker
 
+Deployment, environment variables and operations: `docs/ai/DEPLOYMENT_GUIDE.md`, `docs/ai/ENVIRONMENT_SETUP.md`, `docs/ai/AI_OPERATIONS_GUIDE.md`. Production template: `.env.production.example`. Kubernetes and alert rules: `deploy/`.
+
+
 ```bash
 docker compose up --build              # dev target, live reload, mock backend
 docker build -t cfp-ai .               # production image (runtime target)
@@ -74,7 +77,8 @@ The production image runs as a non-root user, has no dev dependencies, and **phy
 ## Quality checks
 
 ```bash
-uv run pytest            # 206 tests
+uv run pytest            # 402 tests
+uv run python -m cfp_ai.evals   # evaluation suites vs thresholds (exit 1 on a miss)
 uv run mypy              # strict
 uv run ruff check src tests && uv run ruff format --check src tests
 ```
@@ -84,12 +88,13 @@ uv run ruff check src tests && uv run ruff format --check src tests
 - **API keys stay in this service.** They are `SecretStr`, never logged, never returned (`/v1/admin/health` reports only "configured"). The frontend calls the service through its server-side BFF, and there is no CORS.
 - **Tenant and principal come only from the verified token.** Backend calls forward the user's token, so the backend's authorisation decides what the AI may see.
 - **No employee or competency database.** The conventional backend is the source of truth. This service caches reads briefly (≤ 5 min, keyed by the caller's visibility scope) and does not persist them.
+- **Prompt-injection defence in depth, rate limits and an audit trail.** Untrusted text is escaped into data blocks under a gateway-enforced policy, scores are deterministic, suspected injections are audited and shown to assessors, requests are rate-limited per user and tenant, and consequential actions are audited (`GET /v1/audit/events`). See `docs/ai/QA_REPORT.md`.
 - **Mock data cannot reach production.** Settings reject it, the mock client refuses to construct, it is imported lazily only in mock mode, and it is deleted from the production image. A test proves a prod-configured app never imports it.
 
 ## Not yet implemented
 
 - 6 of the 18 public capabilities (C4 scenario drafting, D5 cohort pathways, D6 manager recommendations, T2 assessment role-play, T5 evidence analysis, T6 insights). They are declared and report `ai_disabled` until implemented.
 - A connection to the real backend: no backend API documentation has been received, so every endpoint is `proposed` outside dev/test and is never called (see BACKEND_INTEGRATION_SPEC.md §11–§12, and `python -m cfp_ai.integrations.backend.openapi_check` for when the OpenAPI arrives).
-- Durable shared storage (Postgres and pgvector): memory, drafts, execution history, LangGraph checkpoints, RAG index. Workflow state can use SQLite (single replica); everything else is in-memory today.
+- Durable shared storage (Postgres and pgvector): memory, the audit log, rate-limit counters, drafts, execution history, LangGraph checkpoints, RAG index. Workflow state can use SQLite (single replica); everything else is in-memory today.
 - Async jobs (ARQ): drafts and reviews run synchronously today. The service-account token (BE-003).
 - Any backend endpoint marked `available`. None is confirmed by the backend team yet.

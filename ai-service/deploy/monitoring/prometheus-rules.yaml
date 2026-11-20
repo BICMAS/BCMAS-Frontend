@@ -1,0 +1,95 @@
+# Prometheus alerting rules for the CFP AI service (AI_OPERATIONS_GUIDE.md §3).
+# Plain rule-file format; wrap in a PrometheusRule CRD if you use the Prometheus Operator.
+groups:
+  - name: cfp-ai-availability
+    rules:
+      - alert: CfpAiDown
+        expr: up{job="cfp-ai-service"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: AI service is not being scraped (down or unreachable).
+      - alert: CfpAiHighErrorRate
+        expr: |
+          sum(rate(ai_requests_total{status_code=~"5.."}[5m]))
+            / clamp_min(sum(rate(ai_requests_total[5m])), 1) > 0.05
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: More than 5% of AI requests fail with 5xx.
+      - alert: CfpAiUnhandledExceptions
+        expr: increase(ai_unhandled_exceptions_total[15m]) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: "Unhandled exceptions ({{ $labels.type }}): a bug. Search logs for error_fingerprint."
+      - alert: CfpAiSlowRequests
+        expr: |
+          histogram_quantile(0.95, sum by (le, route) (rate(ai_request_duration_seconds_bucket[10m]))) > 30
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: "p95 latency above 30 s on {{ $labels.route }}."
+
+  - name: cfp-ai-llm
+    rules:
+      - alert: CfpAiLlmFailures
+        expr: |
+          sum by (provider) (rate(ai_llm_calls_total{outcome!="ok"}[10m]))
+            / clamp_min(sum by (provider) (rate(ai_llm_calls_total[10m])), 0.01) > 0.2
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: "More than 20% of {{ $labels.provider }} LLM calls fail (outage, quota or key problem)."
+      - alert: CfpAiInvalidOutputs
+        expr: increase(ai_output_invalid_total[1h]) > 10
+        labels: { severity: ticket }
+        annotations:
+          summary: Structured outputs keep failing validation after repair (prompt or model regression).
+      - alert: CfpAiBudgetWarning
+        expr: ai_llm_budget_used_ratio > 0.8
+        labels: { severity: ticket }
+        annotations:
+          summary: "Tenant {{ $labels.tenant }} has used over 80% of its monthly token budget."
+      - alert: CfpAiBudgetExhausted
+        expr: increase(ai_llm_budget_rejections_total[15m]) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: "Tenant {{ $labels.tenant }} is being refused AI calls (budget exhausted)."
+      - alert: CfpAiSpendSpike
+        expr: sum(increase(ai_llm_cost_usd_total[1h])) > 2 * sum(increase(ai_llm_cost_usd_total[1h] offset 1d))
+          and sum(increase(ai_llm_cost_usd_total[1h])) > 5
+        labels: { severity: ticket }
+        annotations:
+          summary: Hourly LLM spend is more than double the same hour yesterday.
+      - alert: CfpAiUnpricedModel
+        expr: increase(ai_llm_unpriced_calls_total[1h]) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: "Model {{ $labels.model }} has no price in llm_routes.yaml; cost is under-reported."
+
+  - name: cfp-ai-backend
+    rules:
+      - alert: CfpAiBackendCircuitOpen
+        expr: max(ai_backend_circuit_open) > 0
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: The circuit to the conventional backend is open; AI features are degraded.
+      - alert: CfpAiBackendContractViolations
+        expr: increase(ai_backend_contract_violation_total[30m]) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: The backend returned payloads that violate the agreed contract.
+
+  - name: cfp-ai-security
+    rules:
+      - alert: CfpAiRateLimitedSpike
+        expr: sum(increase(ai_requests_total{error_code="rate_limited"}[15m])) > 200
+        labels: { severity: ticket }
+        annotations:
+          summary: Many requests are being rate limited (abuse, runaway client or limits too low).
+      - alert: CfpAiAuthFailures
+        expr: sum(increase(ai_requests_total{error_code="unauthenticated"}[15m])) > 500
+        labels: { severity: ticket }
+        annotations:
+          summary: Unusual number of authentication failures (JWKS problem, clock skew or token abuse).

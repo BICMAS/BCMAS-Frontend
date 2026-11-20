@@ -83,14 +83,26 @@ class JwksTokenVerifier:
         self._audiences = audiences
         self._algorithms = algorithms
         self._leeway = leeway_s
+        self._client: jwt.PyJWKClient | None = None
         if key_resolver is None:
             client = jwt.PyJWKClient(jwks_url, cache_keys=True, lifespan=cache_s)
+            self._client = client
 
             def resolve(token: str) -> Any:
                 return client.get_signing_key_from_jwt(token).key
 
             key_resolver = resolve
         self._resolve_key = key_resolver
+
+    async def probe(self) -> str | None:
+        """Readiness: can the signing keys be fetched? Returns a problem description or None."""
+        if self._client is None:
+            return None
+        try:
+            keys = await asyncio.wait_for(asyncio.to_thread(self._client.get_signing_keys), timeout=3)
+        except (jwt.PyJWKClientError, TimeoutError, OSError) as exc:
+            return f"JWKS unavailable: {type(exc).__name__}"
+        return None if keys else "JWKS has no signing keys"
 
     async def verify(self, token: str) -> Principal:
         try:

@@ -1,0 +1,75 @@
+# CFP AI service — Service, PersistentVolumeClaim, ConfigMap, NetworkPolicy (DEPLOYMENT_GUIDE.md §4).
+apiVersion: v1
+kind: Service
+metadata:
+  name: cfp-ai-service
+  labels: { app.kubernetes.io/name: cfp-ai-service }
+spec:
+  selector: { app.kubernetes.io/name: cfp-ai-service }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+# Workflow state (SQLite). ReadWriteOnce: one writer. Snapshot it on a schedule (AI_OPERATIONS_GUIDE.md §7).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cfp-ai-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 5Gi }
+---
+# Non-secret configuration. Secrets go in the cfp-ai-secrets Secret (see secret.example.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cfp-ai-config
+data:
+  CFP_AI_ENV: prod
+  CFP_AI_LOG_LEVEL: INFO
+  CFP_AI_LOG_JSON: "true"
+  CFP_AI_RELEASE: RELEASE
+  FORWARDED_ALLOW_IPS: "10.0.0.0/8"                 # replace with the ingress controller's range
+  CFP_AI_AUTH_MODE: jwks
+  CFP_AI_JWKS_URL: https://IDP_HOST/.well-known/jwks.json
+  CFP_AI_JWT_ISSUERS: '["https://IDP_HOST"]'
+  CFP_AI_JWT_AUDIENCES: '["API_AUDIENCE"]'
+  CFP_AI_BACKEND_MODE: http
+  CFP_AI_BACKEND_BASE_URL: https://BACKEND_HOST/api/v1
+  CFP_AI_BACKEND_IDENTITY_MODE: forward
+  CFP_AI_LLM_DEFAULT_PROVIDER: anthropic
+  CFP_AI_ANTHROPIC_DEFAULT_MODEL: claude-opus-5-5
+  CFP_AI_LLM_MONTHLY_TOKEN_BUDGET: "50000000"
+  CFP_AI_LLM_BUDGET_WARN_RATIO: "0.8"
+  CFP_AI_RATE_LIMIT_USER_PER_MINUTE: "120"
+  CFP_AI_RATE_LIMIT_TENANT_PER_MINUTE: "2000"
+  CFP_AI_MAX_REQUEST_BODY_BYTES: "1000000"
+  CFP_AI_WORKFLOW_STORE_PATH: /data/workflows.db
+  CFP_AI_MAINTENANCE_INTERVAL_S: "3600"
+  CFP_AI_COACHING_RETENTION_DAYS: "365"
+  CFP_AI_METRICS_ENABLED: "true"
+---
+# Only the ingress controller (frontend BFF traffic and backend webhooks) and Prometheus may connect.
+# Egress is limited to DNS and HTTPS (LLM provider, backend, identity provider).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cfp-ai-service
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: cfp-ai-service }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports:
+        - { port: 8000, protocol: TCP }
+  egress:
+    - ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
+    - ports:
+        - { port: 443, protocol: TCP }

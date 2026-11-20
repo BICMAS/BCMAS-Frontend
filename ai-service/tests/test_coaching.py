@@ -16,6 +16,7 @@ from cfp_ai.api.app import create_app
 from cfp_ai.container import Container, build_container
 from cfp_ai.integrations.backend.mock.data import PERSONAS
 from cfp_ai.llm.providers.fake_provider import FakeLlmProvider
+from cfp_ai.security.injection import UNTRUSTED_INPUT_POLICY
 from tests.conftest import auth, make_settings
 
 CONVERSATION_MODES = [
@@ -96,7 +97,8 @@ def test_conversation_mode_full_workflow(
     assert coaching["reflective_question"] in result["assistant_message"]["text"]
     assert coaching["stage"] in {"goal", "reality", "options", "way_forward", "review"}
     call = next(c for c in fake_llm.calls if c.route_id == "coaching.conversation_turn")
-    assert call.request.system_blocks[1] == MODES[mode].guidance  # mode-specific coaching method
+    assert call.request.system_blocks[0] == UNTRUSTED_INPUT_POLICY  # every model call starts with the policy
+    assert call.request.system_blocks[2] == MODES[mode].guidance  # mode-specific coaching method
     assert facts_of(fake_llm, "coaching.conversation_turn")["method"] == MODES[mode].method
 
     summary = client.post(

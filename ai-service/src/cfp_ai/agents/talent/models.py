@@ -213,6 +213,7 @@ class AssessmentEvaluation(Strict):
     objectives: list[str]
     methods: list[str]
     scoring_rule: str
+    integrity_warnings: list[str] = Field(default_factory=list)  # e.g. suspected instruction injection
     recommendations: list[CompetencyScore]
     approval_policy: ApprovalPolicy
     provenance: AiProvenance

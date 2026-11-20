@@ -56,7 +56,10 @@ _RANK: dict[Judgement, int] = {"met": 3, "partial": 2, "not_met": 1, "not_eviden
 
 # Personal attributes and potential must never be inferred (AI_TECHNICAL_SPEC.md §14.7).
 POTENTIAL_LANGUAGE = re.compile(
-    r"\b(high[- ]potential|has (?:great |high |real )?potential|potential to (?:become|lead|grow)|"
+    # "has potential" about a person, not "has potential risks/issues" about a design (QA F5).
+    r"\b(high[- ]potential|has (?:great |high |real )?potential"
+    r"(?!\s+(?:risks?|issues?|problems?|impacts?|concerns?|costs?|savings?|benefits?|for\b))|"
+    r"potential to (?:become|lead|grow)|"
     r"natural(?:ly)? (?:leader|talent|gifted)|personality|attitude problem|culture fit|cultural fit|"
     r"his age|her age|their age|too (?:young|old)|gender|ethnic\w*|nationality|religio\w*|disab\w*|"
     r"pregnan\w*|maternity|accent)\b",

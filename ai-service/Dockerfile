@@ -4,9 +4,12 @@
 #
 # Targets:
 #   runtime (default) — production: no dev dependencies, mock backend package removed,
-#                       non-root user, prod environment.  docker build -t cfp-ai .
+#                       non-root user, prod environment.
+#                       docker build --build-arg RELEASE=$(git rev-parse --short HEAD) -t cfp-ai .
 #   dev               — local development: dev dependencies, mock backend, auto-reload.
 #                       docker build --target dev -t cfp-ai:dev .
+#
+# See docs/ai/DEPLOYMENT_GUIDE.md. Never bake secrets into the image: they are injected at run time.
 
 ARG PYTHON_VERSION=3.12
 
@@ -43,16 +46,28 @@ CMD ["uvicorn", "cfp_ai.main:app", "--host", "0.0.0.0", "--port", "8000", "--rel
 
 # ── runtime (production) ─────────────────────────────────────────────────────────────
 FROM base AS runtime
-RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin app
+ARG RELEASE=unknown
+LABEL org.opencontainers.image.title="cfp-ai-service" \
+      org.opencontainers.image.description="CFP AI intelligence layer (multi-agent)" \
+      org.opencontainers.image.revision="${RELEASE}"
+RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin app \
+ && mkdir -p /data \
+ && chown app:app /data
 COPY --from=build /app/.venv /app/.venv
 # Mock data is dev/test-only: physically remove it from the production image and prove it.
 RUN rm -rf /app/.venv/lib/python*/site-packages/cfp_ai/integrations/backend/mock \
  && /app/.venv/bin/python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('cfp_ai.integrations.backend.mock') is not None)"
 ENV PATH="/app/.venv/bin:${PATH}" \
     CFP_AI_ENV=prod \
-    CFP_AI_LOG_JSON=true
+    CFP_AI_LOG_JSON=true \
+    CFP_AI_RELEASE=${RELEASE}
+# Durable workflow state (SQLite, CFP_AI_WORKFLOW_STORE_PATH=/data/workflows.db) lives on a mounted volume.
+VOLUME ["/data"]
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD ["python", "-c", "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).status != 200)"]
-CMD ["uvicorn", "cfp_ai.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-server-header"]
+# One process per container: rate limits, usage counters and in-memory stores are per process, so scale
+# with replicas only once state is durable (AI_OPERATIONS_GUIDE.md §8). Set FORWARDED_ALLOW_IPS to the
+# proxy/ingress addresses so client IPs and scheme from X-Forwarded-* are trusted only from them.
+CMD ["uvicorn", "cfp_ai.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-server-header", "--timeout-graceful-shutdown", "30", "--timeout-keep-alive", "75"]

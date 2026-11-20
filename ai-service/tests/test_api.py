@@ -12,7 +12,8 @@ from tests.conftest import auth
 
 def test_healthz_and_readyz(client: TestClient) -> None:
     assert client.get("/healthz").json() == {"status": "ok"}
-    assert client.get("/readyz").json() == {"status": "ready"}
+    ready = client.get("/readyz")
+    assert ready.status_code == 200 and ready.json()["status"] == "ready"
 
 
 def test_missing_token_returns_error_envelope(client: TestClient) -> None:

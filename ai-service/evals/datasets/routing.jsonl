@@ -1,0 +1,20 @@
+{"id": "r01", "message": "What are my skill gaps?", "expected": ["dev_plan.explain_gaps"]}
+{"id": "r02", "message": "Recommend some courses for me", "expected": ["dev_plan.recommend_learning"]}
+{"id": "r03", "message": "I want to practice a difficult conversation with a role-play", "expected": ["coaching.recommend_scenarios"]}
+{"id": "r04", "message": "Create a development plan for me", "expected": ["dev_plan.draft_plan"]}
+{"id": "r05", "message": "Score the assessment using the rubric", "expected": ["talent.recommend_scores"]}
+{"id": "r06", "message": "Prepare a briefing for my 1:1 with Robert", "expected": ["coaching.manager_brief"]}
+{"id": "r07", "message": "Show my gaps and recommend training", "expected": ["dev_plan.explain_gaps", "dev_plan.recommend_learning"]}
+{"id": "r08", "message": "hello", "expected": []}
+{"id": "r09", "message": "What's the weather like today?", "expected": []}
+{"id": "r10", "message": "Help me build a growth plan and suggest learning", "expected": ["dev_plan.draft_plan", "dev_plan.recommend_learning"]}
+{"id": "r11", "message": "Which areas am I weak in?", "expected": ["dev_plan.explain_gaps"]}
+{"id": "r12", "message": "Give me practice scenarios", "expected": ["coaching.recommend_scenarios"]}
+{"id": "r13", "message": "How should I coach James this week?", "expected": ["coaching.manager_brief"]}
+{"id": "r14", "message": "I need training on API governance", "expected": ["dev_plan.recommend_learning"]}
+{"id": "r15", "message": "Mark these responses against the rubric", "expected": ["talent.recommend_scores"]}
+{"id": "r16", "message": "What missing skills do I have for promotion?", "expected": ["dev_plan.explain_gaps"]}
+{"id": "r17", "message": "Draft my development plan and find practice scenarios", "expected": ["dev_plan.draft_plan", "coaching.recommend_scenarios"]}
+{"id": "r18", "message": "Plan my learning path for next quarter", "expected": ["dev_plan.recommend_learning"]}
+{"id": "r19", "message": "What gaps does my team member have?", "expected": ["dev_plan.explain_gaps"]}
+{"id": "r20", "message": "Which competencies should I strengthen to reach the role requirements?", "expected": ["dev_plan.explain_gaps"]}

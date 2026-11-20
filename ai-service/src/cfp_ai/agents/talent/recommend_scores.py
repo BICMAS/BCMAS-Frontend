@@ -60,6 +60,7 @@ from cfp_ai.llm.types import LlmMessage, LlmRequest
 from cfp_ai.observability.context import principal_hash
 from cfp_ai.observability.logging import redact
 from cfp_ai.schemas.public import ApprovalPolicy, ContextGap
+from cfp_ai.security.injection import scan as scan_injection
 from cfp_ai.validation.structured import generate_validated
 
 SPEC = replace(declared("talent.recommend_scores"), implemented=True, optional_endpoints=("BE-068", "BE-010"))
@@ -130,6 +131,21 @@ class RecommendScoresCapability(Capability[BaseModel, BaseModel]):
         except BackendError as exc:
             raise exc.to_app_error() from exc
         inputs = [self._row_inputs(row, skills[row.skill_id], items, responses, mask) for row in rows]
+        flagged = {r.item_id: found for r in responses if (found := scan_injection(r.response_text))}
+        warnings = [
+            f"{item}: possible instruction injection ({', '.join(found)}); judge the evidence on its merits"
+            for item, found in sorted(flagged.items())
+        ]
+        if flagged and self.deps.audit is not None:
+            self.deps.audit.record(
+                tenant_id=ctx.principal.tenant_id,
+                principal=ctx.principal,
+                action="prompt_injection_suspected",
+                resource_type="assessment",
+                resource=assessment.id,
+                outcome="flagged",
+                detail=",".join(sorted(flagged)),
+            )
         if not any(i.texts or i.keyed_judgements or i.ratings for i in inputs):
             raise AppError("precondition_failed", "The responses do not relate to the rubric competencies.")
         judged = await asyncio.gather(*(self._judge(ctx, i) for i in inputs))
@@ -143,6 +159,7 @@ class RecommendScoresCapability(Capability[BaseModel, BaseModel]):
             objectives=assessment.objectives,
             methods=sorted({i.type for i in items.values()} | {r.item_type for r in responses}),
             scoring_rule=scoring.SCORING_RULE_TEXT,
+            integrity_warnings=warnings,
             recommendations=scores,
             approval_policy=ApprovalPolicy(
                 mode="per_item_review",
@@ -156,6 +173,16 @@ class RecommendScoresCapability(Capability[BaseModel, BaseModel]):
             disclaimer=DISCLAIMER,
         )
         undetermined = sum(s.recommended_score is None for s in scores)
+        if self.deps.audit is not None:
+            self.deps.audit.record(
+                tenant_id=ctx.principal.tenant_id,
+                principal=ctx.principal,
+                action="assessment_scored",
+                resource_type="assessment",
+                resource=assessment.id,
+                outcome="awaiting_review",
+                detail=evaluation.scoring_set_id,
+            )
         approval = ApprovalRequestSpec(
             mode="per_item_review",
             approver_roles=["hr_ld_admin"],
@@ -175,9 +202,12 @@ class RecommendScoresCapability(Capability[BaseModel, BaseModel]):
                         "indicators_met": s.indicators_met,
                         "indicators_missing": s.indicators_missing,
                         "rating_claims": [c.model_dump() for c in s.rating_claims],
+                        "integrity_warnings": [
+                            w for w in warnings if w.split(":", 1)[0] in {t.response_item_id for t in i.texts}
+                        ],
                     },
                 )
-                for s in scores
+                for s, i in zip(scores, inputs, strict=True)
             ],
             commit_endpoint_id=COMMIT_ENDPOINT,
         )

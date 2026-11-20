@@ -12,7 +12,9 @@ from cfp_ai.context.models import CapabilityContext
 
 
 def _section(name: str, lines: list[str]) -> str:
-    body = "\n".join(lines) if lines else "(none)"
+    # Backend text (job descriptions, titles...) is data: it must not open or close sections.
+    safe = [line.replace("<", "\u2039").replace(">", "\u203a") for line in lines]
+    body = "\n".join(safe) if safe else "(none)"
     return f"<{name}>\n{body}\n</{name}>"
 
 

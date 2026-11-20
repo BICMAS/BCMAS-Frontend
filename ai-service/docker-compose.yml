@@ -1,14 +1,46 @@
-# Local development. Uses the in-process mock backend and dev tokens (see .env.example).
+# Local development for the AI service (see docs/ai/ENVIRONMENT_SETUP.md).
+#
 #   cp .env.example .env
 #   docker compose up --build
-# Then mint a token:  curl -X POST localhost:8000/v1/_dev/tokens -H 'content-type: application/json' -d '{"persona":"james"}'
+#
+# Uses the in-process mock backend, dev tokens and the offline fake LLM unless .env says otherwise.
+# Mint a token:  curl -X POST localhost:8000/v1/_dev/tokens -H 'content-type: application/json' -d '{"persona":"james"}'
+# Run the frontend on the host against it:  AI_SERVICE_URL=http://localhost:8000 AI_DEV_AUTH=true npm run dev
+#
+# Production-image smoke test (no secrets needed; it must REFUSE to start with dev settings):
+#   docker compose --profile prod-check run --rm prod-check
 services:
   ai-service:
     build:
       context: .
       target: dev
     env_file: .env
+    environment:
+      CFP_AI_WORKFLOW_STORE_PATH: /data/workflows.db   # durable workflow state across restarts
     ports:
       - "8000:8000"
     volumes:
-      - ./src:/app/src  # live reload
+      - ./src:/app/src            # live reload
+      - ai-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2).status != 200)"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # Builds the production image and starts it with dev-only settings. The settings guard must reject
+  # them (exit code != 0): proof that mock backend, dev tokens and the fake LLM cannot run in prod.
+  prod-check:
+    profiles: ["prod-check"]
+    build:
+      context: .
+      target: runtime
+    environment:
+      CFP_AI_BACKEND_MODE: mock
+      CFP_AI_AUTH_MODE: dev
+      CFP_AI_LLM_DEFAULT_PROVIDER: fake
+    entrypoint: ["python", "-c", "from cfp_ai.settings import Settings; Settings()"]
+
+volumes:
+  ai-data:

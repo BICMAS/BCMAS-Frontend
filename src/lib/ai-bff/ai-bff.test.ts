@@ -1,6 +1,7 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { bffConfig, clearDevTokenCache, isAllowedRequest, proxyToAi, type BffConfig } from "./index";
+import { bffConfig, clearDevTokenCache, isAllowedRequest, MAX_BODY_BYTES, proxyToAi, type BffConfig } from "./index";
 
 const DEV: BffConfig = { serviceUrl: "http://ai.local", devAuth: true, sessionCookie: "cfp_session", production: false };
 const PROD: BffConfig = { ...DEV, devAuth: false, production: true };
@@ -125,5 +126,40 @@ describe("proxyToAi", () => {
     const response = await proxyToAi(request, ["v1", "capabilities"], PROD, fetchImpl);
     expect(response.status).toBe(502);
     expect((await response.json()).error.code).toBe("upstream_unavailable");
+  });
+
+  it("cancels upstream calls on client abort and on timeout (production readiness)", async () => {
+    const hanging = vi.fn(
+      (_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          // Like fetch: reject at once if already aborted, otherwise when the signal fires.
+          if (init?.signal?.aborted) reject(init.signal.reason);
+          init?.signal?.addEventListener("abort", () => reject(init.signal!.reason));
+        }),
+    ) as unknown as typeof fetch;
+    const browser = new AbortController();
+    const request = new Request("http://app/api/ai/v1/capabilities", { headers: { cookie: "cfp_session=t" }, signal: browser.signal });
+    const pending = proxyToAi(request, ["v1", "capabilities"], PROD, hanging);
+    browser.abort();
+    expect((await pending).status).toBe(502); // upstream fetch was aborted, not left running
+
+    const slow = new Request("http://app/api/ai/v1/capabilities", { headers: { cookie: "cfp_session=t" } });
+    const timedOut = await proxyToAi(slow, ["v1", "capabilities"], { ...PROD, timeoutMs: 20 }, hanging);
+    expect(timedOut.status).toBe(504);
+    expect((await timedOut.json()).error.code).toBe("deadline_exceeded");
+    expect(bffConfig({ AI_REQUEST_TIMEOUT_MS: "90000" }).timeoutMs).toBe(90_000);
+    expect(bffConfig({}).timeoutMs).toBe(300_000);
+  });
+
+  it("rejects oversized bodies without calling the service", async () => {
+    const { fetchImpl, calls } = upstream(() => Response.json({}));
+    const request = new Request("http://app/api/ai/v1/coaching/conversations", {
+      method: "POST",
+      headers: { cookie: "cfp_session=t", "content-type": "application/json" },
+      body: "x".repeat(MAX_BODY_BYTES + 1),
+    });
+    const response = await proxyToAi(request, ["v1", "coaching", "conversations"], PROD, fetchImpl);
+    expect(response.status).toBe(413);
+    expect(calls).toHaveLength(0);
   });
 });

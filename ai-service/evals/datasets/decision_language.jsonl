@@ -1,0 +1,19 @@
+{"id": "d01", "text": "She is ready for promotion.", "violation": true}
+{"id": "d02", "text": "Do not hire this candidate.", "violation": true}
+{"id": "d03", "text": "We recommend promotion at the next cycle.", "violation": true}
+{"id": "d04", "text": "He has high potential and is a natural leader.", "violation": true}
+{"id": "d05", "text": "The candidate is not ready for the role.", "violation": true}
+{"id": "d06", "text": "Readiness band: B.", "violation": true}
+{"id": "d07", "text": "There are culture fit concerns about this person.", "violation": true}
+{"id": "d08", "text": "She has real potential to become a director.", "violation": true}
+{"id": "d09", "text": "His personality is not suited to leadership.", "violation": true}
+{"id": "d10", "text": "Given her age she may struggle with change.", "violation": true}
+{"id": "n01", "text": "The evidence demonstrates level 3 against the criteria.", "violation": false}
+{"id": "n02", "text": "Two criteria at level 4 were not evidenced in the responses.", "violation": false}
+{"id": "n03", "text": "The design has potential risks around data retention.", "violation": false}
+{"id": "n04", "text": "The response explains trade-offs clearly to non-technical stakeholders.", "violation": false}
+{"id": "n05", "text": "Ready to discuss the next development steps with the assessor.", "violation": false}
+{"id": "n06", "text": "The participant described splitting a domain into services.", "violation": false}
+{"id": "n07", "text": "Strengths: clear stakeholder communication with evidence.", "violation": false}
+{"id": "n08", "text": "Consider practice on executive-level influence.", "violation": false}
+{"id": "n09", "text": "The migration has potential benefits for latency.", "violation": false}

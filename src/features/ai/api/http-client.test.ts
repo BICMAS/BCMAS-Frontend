@@ -70,6 +70,22 @@ describe("HttpAiClient", () => {
     expect(describeAiError(error).message).toContain("BE-052");
   });
 
+  it("explains rate limiting with the Retry-After delay (QA)", async () => {
+    const { fetch } = fakeFetch(() =>
+      Response.json(
+        { error: { code: "rate_limited", message: "Too many requests.", retryable: true, request_id: "req_1" } },
+        { status: 429, headers: { "retry-after": "17" } },
+      ),
+    );
+    const error = await new HttpAiClient({ fetch }).listSuggestions().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(AiApiError);
+    expect((error as AiApiError).retryAfterS).toBe(17);
+    const shown = describeAiError(error);
+    expect(shown.title).toBe("Too many requests");
+    expect(shown.message).toMatch(/about 17 seconds/);
+    expect(shown.retryable).toBe(true);
+  });
+
   it("reports network failures and non-JSON errors as retryable", async () => {
     const offline = new HttpAiClient({ fetch: (() => Promise.reject(new TypeError("offline"))) as unknown as typeof fetch });
     await expect(offline.listModes()).rejects.toMatchObject({ code: "network_error", retryable: true });

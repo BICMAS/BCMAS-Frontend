@@ -332,7 +332,32 @@ class DraftService:
         )
         return await self._view(principal, record)
 
+    def _audit(
+        self, principal: Principal, action: str, draft_id: str, outcome: str, detail: str | None
+    ) -> None:
+        if self._deps.audit is not None:
+            self._deps.audit.record(
+                tenant_id=principal.tenant_id,
+                principal=principal,
+                action=action,
+                resource_type="draft",
+                resource=draft_id,
+                outcome=outcome,
+                detail=detail,
+            )
+
     async def resolve(self, principal: Principal, draft_id: str, request: ResolveRequest) -> DraftEnvelope:
+        """Human review of an AI draft; every attempt is audited."""
+        try:
+            envelope = await self._resolve(principal, draft_id, request)
+        except AppError as exc:
+            outcome = "denied" if exc.code in ("forbidden", "not_found") else "failed"
+            self._audit(principal, "draft_resolved", draft_id, outcome, exc.code)
+            raise
+        self._audit(principal, "draft_resolved", draft_id, envelope.draft.status, envelope.draft.kind)
+        return envelope
+
+    async def _resolve(self, principal: Principal, draft_id: str, request: ResolveRequest) -> DraftEnvelope:
         record = await self._visible(principal, draft_id)
         if record.draft.status != "open":
             raise AppError("conflict", f"This draft is {record.draft.status}.")
@@ -386,6 +411,20 @@ class DraftService:
         return await self._view(principal, record)
 
     async def commit_report(
+        self, principal: Principal, draft_id: str, committed_ref: CommittedRef
+    ) -> DraftEnvelope:
+        try:
+            envelope = await self._commit_report(principal, draft_id, committed_ref)
+        except AppError as exc:
+            outcome = "denied" if exc.code in ("forbidden", "not_found") else "failed"
+            self._audit(principal, "draft_commit_reported", draft_id, outcome, exc.code)
+            raise
+        self._audit(
+            principal, "draft_commit_reported", draft_id, envelope.draft.status, committed_ref.resource_type
+        )
+        return envelope
+
+    async def _commit_report(
         self, principal: Principal, draft_id: str, committed_ref: CommittedRef
     ) -> DraftEnvelope:
         record = await self._visible(principal, draft_id)

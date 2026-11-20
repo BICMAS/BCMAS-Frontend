@@ -118,6 +118,10 @@ class Settings(BaseSettings):
     openai_default_model: str | None = None
     openai_base_url: str | None = None
     llm_max_retries: int = 2
+    # Cost management: monthly token budget (input + output) per tenant; None = unlimited.
+    llm_monthly_token_budget: int | None = Field(default=None, ge=1)
+    llm_tenant_token_budgets: dict[str, int] = Field(default_factory=dict)  # per-tenant overrides
+    llm_budget_warn_ratio: float = Field(default=0.8, gt=0, le=1)
 
     # Entitlements used when the token has no ai_entitlements claim and BE-005 is not
     # available. None → all in dev/test, none in staging/prod (fail closed).
@@ -141,12 +145,24 @@ class Settings(BaseSettings):
     dev_plan_approval_mode: Literal["role_approval", "user_accept"] = "role_approval"
     dev_plan_max_goals: int = 6
     draft_ttl_days: int = 14
+    # Rate limits per one-minute window (AI_API_SPEC.md §8); 0 disables a limit.
+    rate_limit_user_per_minute: int = Field(default=120, ge=0)
+    rate_limit_tenant_per_minute: int = Field(default=2000, ge=0)
     # Collaborative workflows: state store (SQLite file; None = in-memory) and automatic stage retries.
     workflow_store_path: str | None = None
     workflow_retry_attempts: int = Field(default=3, ge=1, le=10)
     workflow_retry_backoff_s: float = Field(default=0.5, ge=0, le=60)
+    # In-process maintenance (coaching retention purge); 0 disables (e.g. when an external scheduler runs it).
+    maintenance_interval_s: int = Field(default=3600, ge=0)
+
+    # ── HTTP hardening ───────────────────────────────────────────────────
+    max_request_body_bytes: int = Field(default=1_000_000, ge=10_000)
 
     # ── Observability ────────────────────────────────────────────────────
+    # Optional error reporting to Sentry (needs the sentry-sdk package in the image). No PII is sent.
+    sentry_dsn: SecretStr | None = None
+    sentry_traces_sample_rate: float = Field(default=0.0, ge=0, le=1)
+    release: str | None = None  # e.g. the image tag or git SHA, reported with errors and on /readyz
     otel_exporter: Literal["none", "console"] = "none"
     metrics_enabled: bool = True
     log_hash_key: SecretStr | None = None  # required outside dev/test

@@ -21,15 +21,23 @@ export type BffConfig = {
   devAuth: boolean;
   sessionCookie: string;
   production: boolean;
+  /** Upper bound for one upstream call, streams included (`AI_REQUEST_TIMEOUT_MS`, default 300 s). */
+  timeoutMs?: number;
 };
+
+const DEFAULT_TIMEOUT_MS = 300_000;
+/** Matches the AI service's CFP_AI_MAX_REQUEST_BODY_BYTES default; larger bodies never leave the BFF. */
+export const MAX_BODY_BYTES = 1_000_000;
 
 export function bffConfig(env: Record<string, string | undefined> = process.env): BffConfig {
   const production = env.NODE_ENV === "production";
+  const timeout = Number(env.AI_REQUEST_TIMEOUT_MS);
   return {
     serviceUrl: env.AI_SERVICE_URL ? env.AI_SERVICE_URL.replace(/\/+$/, "") : null,
     devAuth: !production && env.AI_DEV_AUTH === "true",
     sessionCookie: env.AI_SESSION_COOKIE || "cfp_session",
     production,
+    timeoutMs: Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_TIMEOUT_MS,
   };
 }
 
@@ -133,16 +141,26 @@ export async function proxyToAi(
     if (value) headers.set(name, value);
   }
   const hasBody = request.method !== "GET" && request.method !== "DELETE";
+  const body = hasBody ? await request.text() : undefined;
+  if (body !== undefined && new TextEncoder().encode(body).length > MAX_BODY_BYTES) {
+    return errorResponse(413, "invalid_request", "The request body is too large.");
+  }
+  // Cancel the upstream call (and its LLM stream) when the browser goes away or the call runs too long.
+  const signal = AbortSignal.any([request.signal, AbortSignal.timeout(config.timeoutMs ?? DEFAULT_TIMEOUT_MS)]);
   let response: Response;
   try {
     response = await fetchImpl(upstream, {
       method: request.method,
       headers,
-      body: hasBody ? await request.text() : undefined,
+      body,
       cache: "no-store",
       redirect: "manual",
+      signal,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      return errorResponse(504, "deadline_exceeded", "The AI service took too long to respond.");
+    }
     return errorResponse(502, "upstream_unavailable", "The AI service could not be reached.");
   }
   const out = new Headers({ "Cache-Control": "no-store" });

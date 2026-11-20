@@ -15,7 +15,8 @@ from typing import Literal
 WellbeingFlag = Literal["none", "wellbeing_concern", "formal_complaint"]
 
 _CRISIS = re.compile(
-    r"\b(suicid\w*|kill myself|end my life|self[- ]?harm|hurt myself|want to die|can'?t go on|"
+    r"\b(suicid\w*|kill(?:ing)? myself|end(?:ing)? (?:my life|it all)|take my (?:own )?life|self[- ]?harm\w*|"
+    r"hurt(?:ing)? myself|want to die|can'?t go on|"
     r"overdose|panic attacks?|breakdown)\b",
     re.IGNORECASE,
 )

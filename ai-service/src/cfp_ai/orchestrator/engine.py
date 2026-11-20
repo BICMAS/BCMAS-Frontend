@@ -194,6 +194,47 @@ class Orchestrator:
         decision: ApprovalDecisionInput,
         request_id: str,
     ) -> ExecutionRecord:
+        """Human approval checkpoint; every attempt (allowed, denied, failed) is audited."""
+        try:
+            record = await self._decide(principal, execution_id, approval_id, decision, request_id)
+        except AppError as exc:
+            outcome = "denied" if exc.code in ("forbidden", "not_found") else "failed"
+            self._audit(principal, "approval_decided", approval_id, outcome, exc.code)
+            raise
+        approval = next(
+            (s.approval for s in record.steps if s.approval and s.approval.approval_id == approval_id), None
+        )
+        self._audit(
+            principal,
+            "approval_decided",
+            approval_id,
+            approval.status if approval else "unknown",
+            approval.capability if approval else None,
+        )
+        return record
+
+    def _audit(
+        self, principal: Principal, action: str, resource: str, outcome: str, detail: str | None
+    ) -> None:
+        if self._deps.audit is not None:
+            self._deps.audit.record(
+                tenant_id=principal.tenant_id,
+                principal=principal,
+                action=action,
+                resource_type="approval",
+                resource=resource,
+                outcome=outcome,
+                detail=detail,
+            )
+
+    async def _decide(
+        self,
+        principal: Principal,
+        execution_id: str,
+        approval_id: str,
+        decision: ApprovalDecisionInput,
+        request_id: str,
+    ) -> ExecutionRecord:
         async with self._store.lock(execution_id):
             record = self._get_record(principal.tenant_id, execution_id)
             approval = record.pending_approval()

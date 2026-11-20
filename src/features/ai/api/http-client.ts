@@ -207,7 +207,10 @@ export class HttpAiClient implements AiClient {
 async function toError(response: Response): Promise<AiApiError> {
   try {
     const payload = (await response.json()) as { error?: ErrorBody };
-    if (payload.error?.code) return AiApiError.fromBody(payload.error, response.status);
+    const retryAfter = Number(response.headers.get("retry-after"));
+    if (payload.error?.code) {
+      return AiApiError.fromBody(payload.error, response.status, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null);
+    }
   } catch {
     // fall through: non-JSON error
   }

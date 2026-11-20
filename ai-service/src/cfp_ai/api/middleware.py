@@ -87,3 +87,67 @@ class RequestContextMiddleware:
             )
             for var, token in reversed(tokens):
                 var.reset(token)
+
+
+_TOO_LARGE = (
+    b'{"error":{"code":"invalid_request","message":"The request body is too large.","retryable":false}}'
+)
+
+
+class BodySizeLimitMiddleware:
+    """Rejects request bodies above ``max_bytes`` with 413 before a route reads them.
+
+    With ``Content-Length`` the declared size is checked up front (the server enforces that the
+    body matches it). Without it (chunked uploads) the body is read here, up to the limit, and
+    replayed to the application; anything larger is rejected without reaching a route.
+    """
+
+    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    @staticmethod
+    async def _reject(send: Send) -> None:
+        headers = [(b"content-type", b"application/json"), (b"content-length", str(len(_TOO_LARGE)).encode())]
+        await send({"type": "http.response.start", "status": 413, "headers": headers})
+        await send({"type": "http.response.body", "body": _TOO_LARGE})
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        declared = next((v for k, v in scope["headers"] if k == b"content-length"), None)
+        if declared is not None:
+            try:
+                too_big = int(declared) > self.max_bytes
+            except ValueError:
+                too_big = True
+            if too_big:
+                await self._reject(send)
+                return
+            await self.app(scope, receive, send)
+            return
+        if not any(k == b"transfer-encoding" for k, _ in scope["headers"]):
+            await self.app(scope, receive, send)  # no body
+            return
+        body = bytearray()
+        while True:
+            message = await receive()
+            if message["type"] != "http.request":
+                return  # client went away
+            body += message.get("body", b"")
+            if len(body) > self.max_bytes:
+                await self._reject(send)
+                return
+            if not message.get("more_body", False):
+                break
+        replayed = False
+
+        async def replay() -> Message:
+            nonlocal replayed
+            if not replayed:
+                replayed = True
+                return {"type": "http.request", "body": bytes(body), "more_body": False}
+            return await receive()
+
+        await self.app(scope, replay, send)

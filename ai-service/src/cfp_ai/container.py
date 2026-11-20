@@ -36,11 +36,14 @@ from cfp_ai.integrations.backend.registry import BackendEndpointRegistry
 from cfp_ai.llm.gateway import LlmGateway
 from cfp_ai.llm.providers.base import LlmProvider
 from cfp_ai.llm.routes import RouteTable, load_routes
+from cfp_ai.llm.usage import UsageTracker
 from cfp_ai.memory.in_memory import InMemoryLearnerMemory, InMemoryMessageStore
 from cfp_ai.observability.metrics import Metrics
 from cfp_ai.orchestrator.engine import Orchestrator
 from cfp_ai.orchestrator.router import Router
 from cfp_ai.orchestrator.store import ExecutionStore, SuggestionStore
+from cfp_ai.security.audit import AuditLog
+from cfp_ai.security.rate_limit import RateLimiter
 from cfp_ai.settings import AuthMode, BackendMode, LlmProviderName, Settings
 from cfp_ai.tools.backend_tools import register_backend_tools
 from cfp_ai.tools.registry import ToolRegistry
@@ -70,6 +73,8 @@ class Container:
     drafts: DraftService
     talent_results: TalentResultStore
     workflows: WorkflowService
+    audit: AuditLog
+    rate_limiter: RateLimiter
     workflow_store: WorkflowStore
     executions: ExecutionStore
     suggestions: SuggestionStore
@@ -258,7 +263,16 @@ def build_container(
     backend = backend or _build_backend(settings, endpoints, metrics)
     routes = load_routes(settings.llm_routes_path, settings)
     provider_map = dict(providers) if providers is not None else _build_providers(settings)
-    gateway = LlmGateway(routes=routes, providers=provider_map, metrics=metrics)
+    gateway = LlmGateway(
+        routes=routes,
+        providers=provider_map,
+        metrics=metrics,
+        usage=UsageTracker(
+            default_budget=settings.llm_monthly_token_budget,
+            tenant_budgets=settings.llm_tenant_token_budgets,
+            warn_ratio=settings.llm_budget_warn_ratio,
+        ),
+    )
     context = ContextBuilder(
         backend=backend,
         cache=TtlCache(),
@@ -278,6 +292,7 @@ def build_container(
     capabilities.declare(PUBLIC_CAPABILITIES)
     scenarios = ScenarioStore(seed=settings.env.is_local)  # seed scenarios are dev/test data only
     coaching_store = CoachingStore()
+    audit = AuditLog()
     deps = AgentDeps(
         backend=backend,
         context=context,
@@ -288,6 +303,7 @@ def build_container(
         metrics=metrics,
         scenarios=scenarios,
         coaching_store=coaching_store,
+        audit=audit,
     )
     # Drafts authorise with the base deps; agents receive deps that include the draft service.
     drafts = DraftService(deps=deps, endpoints=endpoints, ttl_days=settings.draft_ttl_days)
@@ -364,6 +380,10 @@ def build_container(
         talent_results=talent_results,
         workflows=workflows,
         workflow_store=workflow_store,
+        audit=audit,
+        rate_limiter=RateLimiter(
+            per_user=settings.rate_limit_user_per_minute, per_tenant=settings.rate_limit_tenant_per_minute
+        ),
     )
 
 
@@ -379,4 +399,12 @@ def describe(container: Container) -> dict[str, Any]:
         "llm_routes": len(container.routes.routes),
         "llm_routes_unusable": sorted(container.routes.unusable),
         "backend_endpoints": container.endpoints.counts(),
+        "workflow_store": "sqlite" if s.workflow_store_path else "memory",
+        "llm_monthly_token_budget": s.llm_monthly_token_budget,
+        "rate_limits_per_minute": {
+            "user": s.rate_limit_user_per_minute,
+            "tenant": s.rate_limit_tenant_per_minute,
+        },
+        "error_reporting": "sentry" if s.sentry_dsn else "logs",
+        "release": s.release,
     }

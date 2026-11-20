@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Annotated, get_args
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Query, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel
 
@@ -12,7 +13,16 @@ from cfp_ai import __version__
 from cfp_ai.auth.dependencies import CurrentPrincipal
 from cfp_ai.container import Container
 from cfp_ai.errors import AppError
-from cfp_ai.schemas.public import AdminHealthResponse, CapabilitiesResponse, DependencyHealth
+from cfp_ai.llm.usage import month_key, p95
+from cfp_ai.observability.readiness import Readiness, ReadinessChecker
+from cfp_ai.schemas.public import (
+    AdminHealthResponse,
+    AdminMetricsResponse,
+    CapabilitiesResponse,
+    CapabilityId,
+    DependencyHealth,
+    TenantUsageRow,
+)
 
 router = APIRouter()
 
@@ -27,13 +37,14 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/readyz", include_in_schema=False)
-async def readyz(request: Request, response: Response) -> dict[str, str]:
-    container = _container(request)
-    if not container.providers:
+@router.get("/readyz", include_in_schema=False, response_model=Readiness)
+async def readyz(request: Request, response: Response) -> Readiness:
+    checker: ReadinessChecker = request.app.state.readiness
+    result = await checker.check()
+    if result.status != "ready":
         response.status_code = 503
-        return {"status": "not_ready", "reason": "no LLM provider configured"}
-    return {"status": "ready"}
+    response.headers["Cache-Control"] = "no-store"
+    return result
 
 
 @router.get("/internal/metrics", include_in_schema=False)
@@ -109,4 +120,53 @@ async def admin_health(request: Request, principal: CurrentPrincipal) -> AdminHe
         overall = "degraded"
     return AdminHealthResponse(
         status=overall, version=__version__, dependencies=deps, checked_at=datetime.now(UTC)
+    )
+
+
+_CAPABILITIES = frozenset(get_args(CapabilityId))
+
+
+def _next_month(start: datetime) -> datetime:
+    return start.replace(month=start.month % 12 + 1, year=start.year + start.month // 12)
+
+
+@router.get("/v1/admin/metrics", response_model=AdminMetricsResponse, tags=["platform"])
+async def admin_metrics(
+    request: Request,
+    principal: CurrentPrincipal,
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+) -> AdminMetricsResponse:
+    """LLM usage per tenant for one calendar month (UTC): the month of ``from``, default the current one.
+
+    Served from this replica's in-memory tracker; Prometheus is the durable source for billing.
+    """
+    if not principal.has_any_role("platform_super_admin"):
+        raise AppError("forbidden")
+    tracker = _container(request).gateway.usage
+    now = datetime.now(UTC)
+    if from_ is not None and from_.tzinfo is None:
+        from_ = from_.replace(tzinfo=UTC)
+    start = (from_ or now).astimezone(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month = month_key(start)
+    end = now if month == month_key(now) else _next_month(start)
+    rows = []
+    latency: dict[str, list[int]] = {}
+    for tenant, row in sorted(tracker.snapshot(month).items()):
+        budget = tracker.budget(tenant)
+        rows.append(
+            TenantUsageRow(
+                tenant_id=tenant,
+                requests=row.calls,
+                input_tokens=row.input_tokens,
+                output_tokens=row.output_tokens,
+                cost_usd=round(row.cost_usd, 6),
+                budget_used_ratio=round(row.tokens / budget, 4) if budget else None,
+            )
+        )
+        for capability, samples in row.latency_ms.items():
+            if capability in _CAPABILITIES:
+                latency.setdefault(capability, []).extend(samples)
+    p95s: dict[CapabilityId, int] = {k: p95(v) for k, v in sorted(latency.items())}  # type: ignore[misc]
+    return AdminMetricsResponse(
+        period_start=start, period_end=end, tenants=rows, p95_latency_ms_by_capability=p95s
     )

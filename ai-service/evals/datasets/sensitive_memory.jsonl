@@ -1,0 +1,12 @@
+{"id": "m01", "text": "Has a medical condition that affects energy levels.", "sensitive": true}
+{"id": "m02", "text": "Is going through a divorce this year.", "sensitive": true}
+{"id": "m03", "text": "Is unhappy with their salary.", "sensitive": true}
+{"id": "m04", "text": "Thinks their colleague is lazy.", "sensitive": true}
+{"id": "m05", "text": "Is pregnant and planning leave.", "sensitive": true}
+{"id": "m06", "text": "Mentioned a disciplinary process last year.", "sensitive": true}
+{"id": "m07", "text": "Practises their religion daily.", "sensitive": true}
+{"id": "m08", "text": "Wants to lead the API governance guild.", "sensitive": false}
+{"id": "m09", "text": "Prefers short, focused coaching sessions.", "sensitive": false}
+{"id": "m10", "text": "Aims to reach level 4 in cloud architecture.", "sensitive": false}
+{"id": "m11", "text": "Likes practising with role-play before big meetings.", "sensitive": false}
+{"id": "m12", "text": "Is preparing to present a technical vision to executives.", "sensitive": false}
