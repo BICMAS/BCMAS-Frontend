@@ -320,13 +320,6 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
                 matchPrefix: "/talent/recruitment",
               },
               {
-                id: "talent-promotion",
-                label: "Promotion",
-                href: "/talent/promotion",
-                icon: UsersIcon,
-                matchPrefix: "/talent/promotion",
-              },
-              {
                 id: "talent-library",
                 label: "Library",
                 href: "/talent/library",
@@ -382,13 +375,6 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
                 icon: ScrollTextIcon,
               },
             ],
-          },
-          {
-            id: "ai-scenarios",
-            label: "Scenario Library",
-            href: "/ai-coach/scenarios",
-            icon: SparklesIcon,
-            matchPrefix: "/ai-coach",
           },
           {
             id: "learning-insights",
@@ -584,26 +570,12 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             icon: LineChartIcon,
             matchPrefix: "/me/progress",
           },
-          {
-            id: "promotion",
-            label: "Promotion",
-            href: "/me/promotion",
-            icon: ClipboardCheckIcon,
-            matchPrefix: "/me/promotion",
-          },
         ],
       },
       {
         id: "practice",
         title: "Practice",
         items: [
-          {
-            id: "ai-coach",
-            label: "AI Coach",
-            href: "/ai-coach",
-            icon: BotIcon,
-            matchPrefix: "/ai-coach",
-          },
           {
             id: "learning",
             label: "Learning & Development",
@@ -666,9 +638,9 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
       {
         id: "coach",
         label: "Coach",
-        href: "/ai-coach",
+        href: "/ai/coaching",
         icon: BotIcon,
-        matchPrefix: "/ai-coach",
+        matchPrefix: "/ai/coaching",
       },
     ],
   },

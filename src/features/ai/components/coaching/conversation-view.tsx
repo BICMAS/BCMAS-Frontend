@@ -2,7 +2,7 @@
 
 import type { CoachingConversation, CoachingSummary, CoachingTurnResult } from "@ai/contracts";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import { newClientId } from "../../api";
 import { useAiAction, useAiQuery } from "../../hooks/use-ai-query";
 import { ChatComposer, ChatThread } from "../shared/chat";
 import { AiDataRegion, AiDisclaimer, AiInlineError, StatusBadge } from "../shared/ai-states";
+import { AI_COACH, CoachAvatar } from "./coach-avatar";
+import { CoachStage, type CoachPresence } from "./coach-stage";
+import { useCoachSpeech } from "./coach-voice";
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
   const conversation = useAiQuery((c) => c.getConversation(conversationId), [conversationId]);
@@ -43,12 +46,31 @@ function ConversationPanel({
   );
   const end = useAiAction((c) => c.endConversation(initial.conversation_id));
   const ended = initial.status === "ended";
+  const speech = useCoachSpeech();
+  const [listening, setListening] = useState(false);
+  const stopSpeech = speech.stop;
+  const onListeningChange = useCallback(
+    (on: boolean) => {
+      setListening(on);
+      if (on) stopSpeech(); // the coach stops talking when the employee starts
+    },
+    [stopSpeech],
+  );
+  const presence: CoachPresence = listening
+    ? "listening"
+    : send.pending && !streaming
+      ? "thinking"
+      : speech.speaking || (send.pending && streaming)
+        ? "speaking"
+        : "ready";
 
   async function onSend(text: string) {
+    speech.stop();
     setStreaming("");
     const result = await send.run(text);
     setStreaming(null);
     if (!result) return false;
+    if (speech.enabled) speech.speak(result.assistant_message.text);
     setLastTurn(result);
     onChange({
       ...initial,
@@ -89,7 +111,14 @@ function ConversationPanel({
           </>
         }
       />
-      <ChatThread messages={initial.messages} streaming={streaming} assistantLabel="Coach" />
+      <CoachStage name={AI_COACH.name} role={AI_COACH.role} presence={presence} voice={speech} />
+      <ChatThread
+        messages={initial.messages}
+        streaming={streaming}
+        assistantLabel={AI_COACH.name}
+        assistantAvatar={<CoachAvatar name={AI_COACH.name} size={32} />}
+        onListen={speech.supported ? speech.speak : undefined}
+      />
       {lastTurn && !ended ? (
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <span>Stage: {lastTurn.coaching.stage.replace(/_/g, " ")}</span>
@@ -102,7 +131,14 @@ function ConversationPanel({
         </div>
       ) : null}
       <AiInlineError error={send.error ?? end.error} />
-      {!ended ? <ChatComposer onSend={onSend} disabled={send.pending} /> : null}
+      {!ended ? (
+        <ChatComposer
+          onSend={onSend}
+          disabled={send.pending}
+          voiceInput
+          onListeningChange={onListeningChange}
+        />
+      ) : null}
       {ended ? (
         <AiDataRegion {...summary} onRetry={summary.reload}>
           {(s) => <SummaryCard summary={s} />}

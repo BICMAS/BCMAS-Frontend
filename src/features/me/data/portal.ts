@@ -39,7 +39,11 @@ export type GrowthGoal = {
 
 export type EvidenceItem = {
   id: string;
+  /** Title the employee gives the evidence; older items only have a file name. */
+  title?: string;
   fileName: string;
+  /** Every attachment submitted with this evidence (fileName is the first). */
+  fileNames?: string[];
   linkedTo: string;
   when: string;
   status: "verified" | "awaiting_review";
@@ -51,6 +55,8 @@ export type TimelineEvent = {
   title: string;
   detail: string;
   active?: boolean;
+  /** Optional page this event links to, e.g. the learning page for active work. */
+  href?: string;
 };
 
 export const portalSkills: PortalSkill[] = [
@@ -203,6 +209,7 @@ export const initialTimeline: TimelineEvent[] = [
     title: "Working on API Governance",
     detail: "40% of learning objectives complete.",
     active: true,
+    href: "/learning",
   },
   {
     id: "tl-1",

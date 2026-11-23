@@ -1,17 +1,15 @@
-import { getPromotionAssessment } from "./mock-promotion";
-import { getRecruitmentAssessment } from "./mock-recruitment";
+import { listRecruitmentAssessments } from "./mock-recruitment";
 import {
   listTalentAssessments,
-  roleReadiness,
   talentPipeline,
   talentPipelineTotal,
   type Readiness,
 } from "./mock-talent";
 
-export type RoleComparisonRow = {
+export type CandidateComparisonRow = {
   id: string;
   name: string;
-  source: "External candidate" | "Internal employee";
+  role: string;
   result: number;
   readiness: Readiness;
 };
@@ -19,20 +17,14 @@ export type RoleComparisonRow = {
 export type SkillSignalRow = {
   id: string;
   skill: string;
-  external: string;
-  internal: string;
+  assessed: number;
+  ready: number;
   signal: "Strength" | "Gap";
-};
-
-export type WeakRoleRow = {
-  role: string;
-  percent: number;
 };
 
 export type OutcomeRow = {
   id: string;
   name: string;
-  source: "Recruitment" | "Promotion";
   role: string;
   result: number;
   readiness: Readiness;
@@ -41,67 +33,58 @@ export type OutcomeRow = {
 
 const completed = talentPipeline.find((slice) => slice.label === "Completed");
 
+function readyRate() {
+  const all = listTalentAssessments();
+  if (all.length === 0) return "0%";
+  const ready = all.filter((item) => item.readiness === "Ready").length;
+  return `${Math.round((ready / all.length) * 100)}%`;
+}
+
 export const insightStats = {
   completionRate: completed?.share ?? "0%",
   completedCount: completed?.count ?? 0,
   totalCount: talentPipelineTotal,
-  weakRoleCount: roleReadiness.filter((item) => item.percent < 70).length,
+  readyRate: readyRate(),
   recordedOutcomes: listTalentAssessments().length,
 } as const;
 
-export function regionalSalesComparison(): RoleComparisonRow[] {
-  const external = getRecruitmentAssessment("david-kalu");
-  const internal = getPromotionAssessment("tunde-martins");
-  return [
-    {
-      id: "david-kalu",
-      name: external?.candidateName ?? "David Kalu",
-      source: "External candidate",
-      result: external?.score ?? 72,
-      readiness: external?.readiness ?? "Not Ready",
-    },
-    {
-      id: "tunde-martins",
-      name: internal?.employeeName ?? "Tunde Martins",
-      source: "Internal employee",
-      result: internal?.score ?? 76,
-      readiness: internal?.readiness ?? "Near Ready",
-    },
-  ];
+export function candidateComparison(): CandidateComparisonRow[] {
+  return listTalentAssessments()
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      role: item.targetRole,
+      result: item.result,
+      readiness: item.readiness,
+    }))
+    .sort((a, b) => b.result - a.result);
 }
 
-export function regionalSalesSkillSignals(): SkillSignalRow[] {
-  const external = getRecruitmentAssessment("david-kalu");
-  const internal = getPromotionAssessment("tunde-martins");
-  const skills = new Set<string>([
-    ...(external?.rubric.map((row) => row.skill) ?? []),
-    ...(internal?.rubric.map((row) => row.skill) ?? []),
-  ]);
-
-  return [...skills].map((skill) => {
-    const externalRow = external?.rubric.find((row) => row.skill === skill);
-    const internalRow = internal?.rubric.find((row) => row.skill === skill);
-    const bands = [externalRow?.readiness, internalRow?.readiness].filter(Boolean);
-    const signal = bands.includes("Ready") && !bands.includes("Not Ready") ? "Strength" : "Gap";
-    return {
-      id: skill,
-      skill,
-      external: externalRow?.readiness ? `${externalRow.readiness} (${externalRow.score})` : "—",
-      internal: internalRow?.readiness ? `${internalRow.readiness} (${internalRow.score})` : "—",
-      signal,
-    };
-  });
-}
-
-export function weakInternalRoles(): WeakRoleRow[] {
-  return roleReadiness.filter((item) => item.percent < 70).map((item) => ({ ...item }));
+/** Per-skill signal across every scored recruitment rubric. */
+export function skillSignals(): SkillSignalRow[] {
+  const bySkill = new Map<string, { assessed: number; ready: number }>();
+  for (const assessment of listRecruitmentAssessments()) {
+    for (const row of assessment.rubric) {
+      if (!row.readiness) continue;
+      const entry = bySkill.get(row.skill) ?? { assessed: 0, ready: 0 };
+      entry.assessed += 1;
+      if (row.readiness === "Ready") entry.ready += 1;
+      bySkill.set(row.skill, entry);
+    }
+  }
+  return [...bySkill.entries()].map(([skill, entry]) => ({
+    id: skill,
+    skill,
+    assessed: entry.assessed,
+    ready: entry.ready,
+    signal: entry.ready * 2 >= entry.assessed ? "Strength" : "Gap",
+  }));
 }
 
 export function historicalOutcomes(): OutcomeRow[] {
   return listTalentAssessments().map((item) => ({
     id: item.id,
     name: item.name,
-    source: item.type === "recruitment" ? "Recruitment" : "Promotion",
     role: item.targetRole,
     result: item.result,
     readiness: item.readiness,
@@ -110,37 +93,31 @@ export function historicalOutcomes(): OutcomeRow[] {
 }
 
 export function talentInsightsText() {
-  const comparison = regionalSalesComparison()
-    .map((row) => `${row.name}\t${row.source}\t${row.result}%\t${row.readiness}`)
+  const comparison = candidateComparison()
+    .map((row) => `${row.name}\t${row.role}\t${row.result}%\t${row.readiness}`)
     .join("\n");
-  const skills = regionalSalesSkillSignals()
-    .map((row) => `${row.skill}\t${row.external}\t${row.internal}\t${row.signal}`)
-    .join("\n");
-  const weak = weakInternalRoles()
-    .map((row) => `${row.role}\t${row.percent}%`)
+  const skills = skillSignals()
+    .map((row) => `${row.skill}\t${row.ready} of ${row.assessed} ready\t${row.signal}`)
     .join("\n");
   const outcomes = historicalOutcomes()
-    .map((row) => `${row.name}\t${row.source}\t${row.role}\t${row.result}%\t${row.readiness}\t${row.outcome}`)
+    .map((row) => `${row.name}\t${row.role}\t${row.result}%\t${row.readiness}\t${row.outcome}`)
     .join("\n");
 
   return [
     "Talent insights",
     `Completion rate: ${insightStats.completionRate} (${insightStats.completedCount} of ${insightStats.totalCount})`,
-    `Roles with weak internal readiness: ${insightStats.weakRoleCount}`,
+    `Candidates rated Ready: ${insightStats.readyRate}`,
     "",
-    "Regional Sales Manager comparison",
-    "Name\tSource\tResult\tReadiness",
+    "Candidate comparison",
+    "Name\tRole\tResult\tReadiness",
     comparison,
     "",
-    "Skill\tExternal\tInternal\tSignal",
+    "Skills strengths and gaps",
+    "Skill\tReady\tSignal",
     skills,
     "",
-    "Weak internal readiness",
-    "Role\tReadiness",
-    weak,
-    "",
     "Historical outcomes",
-    "Name\tSource\tRole\tResult\tReadiness\tOutcome",
+    "Name\tRole\tResult\tReadiness\tOutcome",
     outcomes,
     "",
   ].join("\n");

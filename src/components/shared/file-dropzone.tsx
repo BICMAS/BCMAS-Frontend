@@ -18,6 +18,8 @@ type FileDropzoneProps = {
   onInvalid?: (message: string) => void;
   className?: string;
   footer?: ReactNode;
+  /** Accept several files at once; onFile is called for each valid file. */
+  multiple?: boolean;
 };
 
 function matchesAccept(file: File, accept?: string) {
@@ -45,6 +47,7 @@ export function FileDropzone({
   onInvalid,
   className,
   footer,
+  multiple = false,
 }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -64,8 +67,8 @@ export function FileDropzone({
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragging(false);
-    const file = event.dataTransfer.files?.[0];
-    if (file) void handleFile(file);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    for (const file of multiple ? files : files.slice(0, 1)) void handleFile(file);
   };
 
   return (
@@ -122,16 +125,17 @@ export function FileDropzone({
           inputRef.current?.click();
         }}
       >
-        Choose File
+        {multiple ? "Choose Files" : "Choose File"}
       </Button>
       <input
         ref={inputRef}
         type="file"
         accept={accept}
+        multiple={multiple}
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handleFile(file);
+          const files = Array.from(e.target.files ?? []);
+          for (const file of multiple ? files : files.slice(0, 1)) void handleFile(file);
           e.target.value = "";
         }}
       />

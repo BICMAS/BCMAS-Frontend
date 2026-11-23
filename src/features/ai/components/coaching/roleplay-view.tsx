@@ -3,7 +3,7 @@
 import type { CoachSession, SessionEvaluation } from "@ai/contracts";
 import { TimerIcon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ import { newClientId } from "../../api";
 import { useAiAction, useAiQuery } from "../../hooks/use-ai-query";
 import { ChatComposer, ChatThread } from "../shared/chat";
 import { AiDataRegion, AiDisclaimer, AiInlineError, StatusBadge } from "../shared/ai-states";
+import { CoachAvatar } from "./coach-avatar";
+import { CoachStage, type CoachPresence } from "./coach-stage";
+import { useCoachSpeech } from "./coach-voice";
 
 export function RoleplayView({ sessionId }: { sessionId: string }) {
   const session = useAiQuery((c) => c.getSession(sessionId), [sessionId]);
@@ -37,12 +40,31 @@ function RoleplayPanel({ initial, onChange }: { initial: CoachSession; onChange:
   );
   const end = useAiAction((c) => c.endSession(initial.session_id));
   const active = initial.status === "active";
+  const speech = useCoachSpeech({ pitch: 0.95 });
+  const [listening, setListening] = useState(false);
+  const stopSpeech = speech.stop;
+  const onListeningChange = useCallback(
+    (on: boolean) => {
+      setListening(on);
+      if (on) stopSpeech();
+    },
+    [stopSpeech],
+  );
+  const presence: CoachPresence = listening
+    ? "listening"
+    : send.pending && !streaming
+      ? "thinking"
+      : speech.speaking || (send.pending && streaming)
+        ? "speaking"
+        : "ready";
 
   async function onSend(text: string) {
+    speech.stop();
     setStreaming("");
     const result = await send.run(text);
     setStreaming(null);
     if (!result) return false;
+    if (speech.enabled) speech.speak(result.coach_message.text);
     setRemaining(result.remaining_s);
     setSuggestEnd(result.suggest_end);
     onChange({ ...initial, messages: [...initial.messages, result.user_message, result.coach_message], status: result.session_status });
@@ -90,14 +112,37 @@ function RoleplayPanel({ initial, onChange }: { initial: CoachSession; onChange:
           </span>
         ) : null}
       </div>
-      <ChatThread messages={initial.messages} streaming={streaming} assistantLabel={initial.persona.name} />
+      <CoachStage
+        name={initial.persona.name}
+        role={initial.persona.role}
+        imageUrl={initial.persona.avatar_url}
+        presence={presence}
+        voice={speech}
+      />
+      <ChatThread
+        messages={initial.messages}
+        streaming={streaming}
+        assistantLabel={initial.persona.name}
+        assistantAvatar={
+          <CoachAvatar name={initial.persona.name} imageUrl={initial.persona.avatar_url} size={32} />
+        }
+        onListen={speech.supported ? speech.speak : undefined}
+      />
       {suggestEnd && active ? (
         <p className="rounded-lg bg-info-soft px-3 py-2 text-sm text-info-soft-foreground">
           The conversation has reached a natural end. End the session to get your feedback.
         </p>
       ) : null}
       <AiInlineError error={send.error ?? end.error} />
-      {active ? <ChatComposer onSend={onSend} disabled={send.pending} placeholder="Your response…" /> : null}
+      {active ? (
+        <ChatComposer
+          onSend={onSend}
+          disabled={send.pending}
+          placeholder="Your response…"
+          voiceInput
+          onListeningChange={onListeningChange}
+        />
+      ) : null}
       {!active ? (
         <AiDataRegion {...evaluation} onRetry={evaluation.reload}>
           {(e) => <EvaluationCard evaluation={e} />}

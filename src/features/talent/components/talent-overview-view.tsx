@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   listTalentAssessments,
-  roleReadiness,
   talentAssessmentHref,
   talentMethods,
   talentMetrics,
@@ -48,11 +47,6 @@ export function TalentOverviewView() {
           </Link>
         ),
       },
-      {
-        id: "type",
-        header: "Assessment Type",
-        cell: (row) => (row.type === "recruitment" ? "Recruitment" : "Promotion"),
-      },
       { id: "role", header: "Target Role", accessorKey: "targetRole" },
       {
         id: "result",
@@ -77,7 +71,7 @@ export function TalentOverviewView() {
     <div className="mx-auto max-w-6xl space-y-8">
       <PageHeader
         title="Talent Assessment & Selection"
-        description="Assess candidates and employees against role requirements for recruitment, promotion and internal mobility."
+        description="Assess candidates against role requirements for recruitment."
         actions={
           <Link href="/talent/recruitment/new" className={cn(buttonVariants())}>
             Create Assessment
@@ -85,7 +79,7 @@ export function TalentOverviewView() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-3">
         {talentMetrics.map((metric) => (
           <div key={metric.label} className="rounded-2xl border border-border-slate bg-white p-5 shadow-sm">
             <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">{metric.label}</p>
@@ -95,7 +89,7 @@ export function TalentOverviewView() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div>
         <section className="rounded-2xl border border-border-slate bg-white p-6 shadow-sm">
           <h2 className="font-bold text-navy">Assessment Pipeline</h2>
           <p className="text-xs text-slate-400">Status of all talent assessments</p>
@@ -125,31 +119,13 @@ export function TalentOverviewView() {
             </ul>
           </div>
         </section>
-
-        <section className="rounded-2xl border border-border-slate bg-white p-6 shadow-sm">
-          <h2 className="font-bold text-navy">Role Readiness (Promotion)</h2>
-          <p className="text-xs text-slate-400">Employee readiness for target roles</p>
-          <div className="mt-6 space-y-4">
-            {roleReadiness.map((item) => (
-              <div key={item.role}>
-                <div className="mb-1 flex justify-between text-xs font-bold text-navy">
-                  <span>{item.role}</span>
-                  <span>{item.percent}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-green-lime" style={{ width: `${item.percent}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
 
       <section className="rounded-2xl border border-border-slate bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="font-bold text-navy">Recent Talent Assessments</h2>
-            <p className="text-xs text-slate-400">Latest recruitment and promotion assessments</p>
+            <p className="text-xs text-slate-400">Latest recruitment assessments</p>
           </div>
           <Button
             type="button"

@@ -171,7 +171,7 @@ export const globalSearchIndex: GlobalSearchResult[] = [
   {
     id: "talent",
     title: "Talent Assessment",
-    description: "Recruitment and promotion readiness",
+    description: "Recruitment readiness against role requirements",
     href: "/talent",
     category: "Development",
   },
@@ -180,13 +180,6 @@ export const globalSearchIndex: GlobalSearchResult[] = [
     title: "Recruitment Assessments",
     description: "Candidate assessments against approved role profiles",
     href: "/talent/recruitment",
-    category: "Development",
-  },
-  {
-    id: "talent-promotion",
-    title: "Promotion Assessments",
-    description: "Internal promotion against an approved role",
-    href: "/talent/promotion",
     category: "Development",
   },
   {

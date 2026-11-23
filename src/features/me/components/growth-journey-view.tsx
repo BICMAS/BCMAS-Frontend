@@ -92,9 +92,9 @@ export function GrowthJourneyView({ goalId }: { goalId: string }) {
       <section className="rounded-2xl bg-linear-to-br from-green-lime to-green-deep p-6 text-navy">
         <h2 className="font-bold">Ready to practice?</h2>
         <p className="mt-2 text-sm">
-          Simulate a briefing with the AI Coach to test your knowledge.
+          Simulate a briefing with your AI coach to test your knowledge.
         </p>
-        <Link href="/ai-coach/session/sim-ai-gov" className={cn(buttonVariants(), "mt-4")}>
+        <Link href="/ai/coaching" className={cn(buttonVariants(), "mt-4")}>
           Launch Session
         </Link>
       </section>

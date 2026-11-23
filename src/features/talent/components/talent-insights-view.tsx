@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ChartColumnIcon, CircleAlertIcon, CircleCheckIcon, UsersIcon } from "lucide-react";
+import { ChartColumnIcon, CircleCheckIcon, UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
@@ -10,16 +10,14 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  candidateComparison,
   historicalOutcomes,
   insightStats,
-  regionalSalesComparison,
-  regionalSalesSkillSignals,
+  skillSignals,
   talentInsightsText,
-  weakInternalRoles,
+  type CandidateComparisonRow,
   type OutcomeRow,
-  type RoleComparisonRow,
   type SkillSignalRow,
-  type WeakRoleRow,
 } from "@/features/talent/services/mock-insights";
 import { useHydratedUser } from "@/features/talent/use-hydrated-user";
 
@@ -31,21 +29,18 @@ const readinessVariant = {
 
 export function TalentInsightsView() {
   const user = useHydratedUser();
-  const comparison = useMemo(() => regionalSalesComparison(), []);
-  const skills = useMemo(() => regionalSalesSkillSignals(), []);
-  const weakRoles = useMemo(() => weakInternalRoles(), []);
+  const comparison = useMemo(() => candidateComparison(), []);
+  const skills = useMemo(() => skillSignals(), []);
   const outcomes = useMemo(() => historicalOutcomes(), []);
-  const external = comparison.find((row) => row.source === "External candidate");
-  const internal = comparison.find((row) => row.source === "Internal employee");
 
-  const comparisonColumns = useMemo<DataTableColumn<RoleComparisonRow>[]>(
+  const comparisonColumns = useMemo<DataTableColumn<CandidateComparisonRow>[]>(
     () => [
       {
         id: "name",
-        header: "Person",
+        header: "Candidate",
         cell: (row) => <span className="font-bold text-navy">{row.name}</span>,
       },
-      { id: "source", header: "Source", accessorKey: "source" },
+      { id: "role", header: "Role", accessorKey: "role" },
       { id: "result", header: "Result", cell: (row) => `${row.result}%` },
       {
         id: "readiness",
@@ -58,8 +53,7 @@ export function TalentInsightsView() {
   const skillColumns = useMemo<DataTableColumn<SkillSignalRow>[]>(
     () => [
       { id: "skill", header: "Skill", accessorKey: "skill" },
-      { id: "external", header: "External candidate", accessorKey: "external" },
-      { id: "internal", header: "Internal employee", accessorKey: "internal" },
+      { id: "ready", header: "Candidates ready", cell: (row) => `${row.ready} of ${row.assessed}` },
       {
         id: "signal",
         header: "Signal",
@@ -68,21 +62,13 @@ export function TalentInsightsView() {
     ],
     [],
   );
-  const weakColumns = useMemo<DataTableColumn<WeakRoleRow>[]>(
-    () => [
-      { id: "role", header: "Role", accessorKey: "role" },
-      { id: "percent", header: "Internal readiness", cell: (row) => `${row.percent}%` },
-    ],
-    [],
-  );
   const outcomeColumns = useMemo<DataTableColumn<OutcomeRow>[]>(
     () => [
       {
         id: "name",
-        header: "Person",
+        header: "Candidate",
         cell: (row) => <span className="font-bold text-navy">{row.name}</span>,
       },
-      { id: "source", header: "Source", accessorKey: "source" },
       { id: "role", header: "Role", accessorKey: "role" },
       { id: "result", header: "Result", cell: (row) => `${row.result}%` },
       {
@@ -104,7 +90,7 @@ export function TalentInsightsView() {
     <div className="mx-auto max-w-6xl space-y-8">
       <PageHeader
         title="Talent Insights"
-        description="Compare external candidates and internal employees on the same role, then review strengths, gaps, completion, and outcomes."
+        description="Compare recruitment candidates against role requirements, then review skill strengths, gaps, completion and outcomes."
         actions={
           <Button
             type="button"
@@ -125,7 +111,7 @@ export function TalentInsightsView() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label="Completion rate"
           value={insightStats.completionRate}
@@ -134,18 +120,11 @@ export function TalentInsightsView() {
           iconWellClassName="bg-green-50 text-green-deep"
         />
         <StatCard
-          label="Regional Sales Manager"
-          value={internal && external ? `${internal.result - external.result}pp` : "—"}
-          delta="Internal ahead of external"
+          label="Candidates rated Ready"
+          value={insightStats.readyRate}
+          delta="Of completed assessments"
+          deltaTone="neutral"
           icon={UsersIcon}
-        />
-        <StatCard
-          label="Weak internal readiness"
-          value={String(insightStats.weakRoleCount)}
-          delta="Roles below 70%"
-          deltaTone="warning"
-          icon={CircleAlertIcon}
-          iconWellClassName="bg-amber-50 text-amber-700"
         />
         <StatCard
           label="Historical outcomes"
@@ -157,21 +136,14 @@ export function TalentInsightsView() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-bold text-navy">Regional Sales Manager</h2>
-        <p className="text-xs text-slate-400">
-          David Kalu is the external candidate. Tunde Martins is the internal employee. Both are already on the overview.
-        </p>
+        <h2 className="font-bold text-navy">Candidate comparison</h2>
+        <p className="text-xs text-slate-400">Completed recruitment assessments, highest result first.</p>
         <DataTable columns={comparisonColumns} data={comparison} getRowId={(row) => row.id} />
       </section>
 
       <section className="space-y-3">
         <h2 className="font-bold text-navy">Skills strengths and gaps</h2>
         <DataTable columns={skillColumns} data={skills} getRowId={(row) => row.id} />
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-bold text-navy">Roles with weak internal readiness</h2>
-        <DataTable columns={weakColumns} data={weakRoles} getRowId={(row) => row.role} />
       </section>
 
       <section className="space-y-3">

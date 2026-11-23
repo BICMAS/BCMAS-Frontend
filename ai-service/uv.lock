@@ -174,11 +174,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", specifier = ">=0.75" },
+    { name = "anthropic", specifier = ">=2.10,<3" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "langgraph", specifier = ">=0.2.60" },
-    { name = "openai", specifier = ">=1.60" },
+    { name = "langgraph", specifier = ">=1.2,<2" },
+    { name = "openai", specifier = ">=3.55,<4" },
     { name = "opentelemetry-api", specifier = ">=1.28" },
     { name = "opentelemetry-sdk", specifier = ">=1.28" },
     { name = "prometheus-client", specifier = ">=0.21" },

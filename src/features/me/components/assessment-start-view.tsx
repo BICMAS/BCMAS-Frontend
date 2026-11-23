@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { useSessionStore } from "@/stores/session-store";
 import {
   getRating,
   listAssessmentQuestions,
@@ -16,7 +15,6 @@ import { cn } from "@/lib/utils";
 
 export function AssessmentStartView({ assessmentId }: { assessmentId: string }) {
   const router = useRouter();
-  const firstName = useSessionStore((state) => state.user.name.split(" ")[0]);
   const questions = listAssessmentQuestions();
   const levels = listRatingLevels();
   const [index, setIndex] = useState(0);
@@ -59,7 +57,7 @@ export function AssessmentStartView({ assessmentId }: { assessmentId: string }) 
           Question {index + 1} of {questions.length}
         </p>
         <h1 className="mt-2 text-3xl font-bold text-navy">
-          Help us understand your skills, {firstName}!
+          Let&apos;s assess your current Capabilities
         </h1>
         <p className="mt-3 max-w-2xl text-slate-500">
           This assessment helps us match your current strengths with your role

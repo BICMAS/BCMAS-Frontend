@@ -117,14 +117,19 @@ export function listTimeline(): TimelineEvent[] {
 }
 
 export async function addEvidence(input: {
-  fileName: string;
+  title: string;
+  fileNames: string[];
   linkedTo: string;
   notes: string;
 }): Promise<EvidenceItem> {
   await mockLatency(600);
+  const files =
+    input.fileNames.length === 1 ? input.fileNames[0] : `${input.fileNames.length} files`;
   const item: EvidenceItem = {
     id: `ev-${Date.now()}`,
-    fileName: input.fileName,
+    title: input.title,
+    fileName: input.fileNames[0] ?? "",
+    fileNames: input.fileNames,
     linkedTo: input.linkedTo,
     when: "Just now",
     status: "awaiting_review",
@@ -136,8 +141,8 @@ export async function addEvidence(input: {
       when: "Just now",
       title: "Evidence submitted",
       detail: input.notes
-        ? `${input.fileName} linked to ${input.linkedTo}. ${input.notes}`
-        : `${input.fileName} linked to ${input.linkedTo}.`,
+        ? `${input.title} (${files}) linked to ${input.linkedTo}. ${input.notes}`
+        : `${input.title} (${files}) linked to ${input.linkedTo}.`,
     },
     ...timeline,
   ];

@@ -40,7 +40,7 @@ const skills = [
 
 const todos = [
   {
-    title: "Evidence Missing",
+    title: "Submit Evidence",
     detail: "Cyber Security",
     href: "/me/progress",
     icon: FilePenIcon,
@@ -48,7 +48,7 @@ const todos = [
     detailTone: "text-amber-700",
   },
   {
-    title: "Awaiting Review",
+    title: "Awaiting Manager Verification",
     detail: "Cloud Infrastructure",
     href: "/me/skills",
     icon: ShieldCheckIcon,
@@ -56,7 +56,7 @@ const todos = [
     detailTone: "text-blue-700",
   },
   {
-    title: "Start Learning",
+    title: "Begin Assigned Learning",
     detail: "AI Ethics 101",
     href: "/me/growth/goal-ai",
     icon: GraduationCapIcon,
@@ -75,9 +75,9 @@ export function EmployeeHomeView() {
         <h1 className="mb-2 text-3xl font-bold tracking-tight text-navy">
           Hello, {firstName}! 👋
         </h1>
-        <p className="max-w-2xl leading-relaxed text-slate-500 italic">
-          &quot;The beautiful thing about learning is that no one can take it
-          away from you.&quot; — B.B. King
+        <p className="max-w-2xl leading-relaxed text-slate-500">
+          Welcome back. Take charge of your growth and build the capabilities
+          you need to excel in your role.
         </p>
       </div>
 
@@ -89,11 +89,12 @@ export function EmployeeHomeView() {
             </div>
             <div className="relative z-10 flex-1 text-center md:text-left">
               <h2 className="mb-2 text-xl font-bold">
-                Complete your 2024 Self-Assessment
+                Your Capability Assessment Is Due
               </h2>
               <p className="mb-6 text-sm leading-relaxed text-white/70">
-                It&apos;s that time again! Reflect on your recent achievements
-                and update your skill levels for the current cycle.
+                Evaluate your current proficiency against the skills required
+                for your role. Complete your self-assessment and provide
+                supporting evidence where required.
               </p>
               <Link
                 href="/me/assessments/cycle-2024/start"
@@ -161,7 +162,7 @@ export function EmployeeHomeView() {
 
               <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-slate bg-slate-50 p-6">
                 <p className="mb-4 text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase">
-                  Overall Role Alignment
+                  Overall Role Capability Alignment
                 </p>
                 <div
                   className="mb-4 grid size-24 place-items-center rounded-full"
@@ -169,7 +170,7 @@ export function EmployeeHomeView() {
                     background:
                       "conic-gradient(var(--color-green-lime) 82%, #e2e8f0 0)",
                   }}
-                  aria-label="82 percent role alignment"
+                  aria-label="82 percent role capability alignment"
                 >
                   <div className="grid size-18 place-items-center rounded-full bg-slate-50">
                     <span className="text-xl leading-none font-bold text-navy">
@@ -234,7 +235,7 @@ export function EmployeeHomeView() {
 
           <section className="rounded-2xl border border-border-slate bg-white p-6 shadow-sm">
             <h2 className="mb-6 text-xs font-bold tracking-wider text-navy uppercase">
-              Development Priorities
+              My Development Priorities
             </h2>
             <div className="space-y-6">
               <div className="flex items-start gap-4">
@@ -272,13 +273,15 @@ export function EmployeeHomeView() {
           </section>
 
           <section className="rounded-2xl bg-linear-to-br from-green-lime to-green-deep p-6 text-navy shadow-xl">
-            <h2 className="mb-2 text-sm font-bold">Practice with AI Coach</h2>
+            <h2 className="mb-2 text-sm font-bold">
+              Build your Capability with AI Coach
+            </h2>
             <p className="mb-4 text-[10px] leading-relaxed font-medium">
-              Ready for a role simulation? Practice your stakeholder influence
-              today.
+              Practise real workplace scenarios, strengthen your skills and
+              receive personalised coaching based on your development needs.
             </p>
             <Link
-              href="/ai-coach"
+              href="/ai/coaching"
               className={cn(
                 buttonVariants({ size: "sm" }),
                 "text-[10px] tracking-widest uppercase",

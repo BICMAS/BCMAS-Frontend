@@ -34,7 +34,7 @@ export function TalentRecordView({
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <p className="text-[11px] font-bold tracking-[0.1em] text-slate-400 uppercase">
-        {type === "recruitment" ? "Recruitment" : "Promotion"}
+        Recruitment
       </p>
       <h1 className="text-3xl font-bold text-navy">{record.name}</h1>
       <p className="text-sm text-slate-500">{record.targetRole}</p>

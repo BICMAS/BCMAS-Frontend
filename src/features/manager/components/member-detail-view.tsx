@@ -53,7 +53,7 @@ export function MemberDetailView({ memberId }: { memberId: string }) {
             <Badge variant="error">Level 2 (Target: 4)</Badge>
           </div>
           <p className="mt-2 text-sm text-slate-500">Self-assessed at Level 2. No evidence submitted.</p>
-          <Link href="/ai-coach/session/sim-ai-gov" className="mt-3 inline-block text-xs font-bold tracking-widest text-navy uppercase">
+          <Link href="/ai/coaching"className="mt-3 inline-block text-xs font-bold tracking-widest text-navy uppercase">
             Coach Member
           </Link>
         </section>

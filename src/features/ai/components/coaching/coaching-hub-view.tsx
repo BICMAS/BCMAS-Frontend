@@ -14,10 +14,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSessionStore } from "@/stores/session-store";
 
 import { useAi } from "../../hooks/ai-client-context";
 import { useAiAction, useAiQuery } from "../../hooks/use-ai-query";
 import { AiDataRegion, AiDisclaimer, AiInlineError, MockModeBanner, StatusBadge } from "../shared/ai-states";
+import { CoachingInsightsPanel, CoachWelcome, ImpactTrend, NextActionCard } from "./coaching-dashboard";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -26,13 +28,15 @@ function formatDate(iso: string) {
 export function CoachingHubView() {
   const { client } = useAi();
   const metrics = useAiQuery((c) => c.getCoachMetrics(), []);
+  const firstName = useSessionStore((state) => state.user.name.split(" ")[0]);
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       <PageHeader
         title="AI Coaching"
-        description="Guided coaching conversations and realistic role-play practice. The coach asks questions to help you find your own way forward; practice never changes your verified levels."
+        description="Your personalised AI-powered development environment. Practise real-world workplace scenarios, strengthen critical capabilities and track your development."
       />
       <MockModeBanner mode={client.mode} />
+      <CoachWelcome firstName={firstName} />
       {metrics.data ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="Practice sessions" value={String(metrics.data.total_sessions)} />
@@ -44,10 +48,13 @@ export function CoachingHubView() {
           />
         </div>
       ) : null}
+      <NextActionCard />
+      <ImpactTrend />
       <Tabs defaultValue="conversations">
         <TabsList>
           <TabsTrigger value="conversations">Coaching conversations</TabsTrigger>
           <TabsTrigger value="roleplay">Interactive role-play</TabsTrigger>
+          <TabsTrigger value="insights">Coaching insights</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="conversations" className="mt-6">
@@ -55,6 +62,9 @@ export function CoachingHubView() {
         </TabsContent>
         <TabsContent value="roleplay" className="mt-6">
           <ScenariosPanel />
+        </TabsContent>
+        <TabsContent value="insights" className="mt-6">
+          <CoachingInsightsPanel />
         </TabsContent>
         <TabsContent value="history" className="mt-6">
           <HistoryPanel />

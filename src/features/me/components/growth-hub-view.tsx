@@ -25,7 +25,7 @@ export function GrowthHubView() {
     <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_300px]">
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-bold text-navy">Active Growth Pathways</h1>
+          <h1 className="text-3xl font-bold text-navy">My Development Plan</h1>
           <Button type="button" onClick={() => setCreating((open) => !open)}>
             + New Development Goal
           </Button>
@@ -109,8 +109,13 @@ export function GrowthHubView() {
             {evidence.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-border-slate px-4 py-3">
                 <div>
-                  <p className="text-sm font-bold text-navy">{item.fileName}</p>
+                  <p className="text-sm font-bold text-navy">{item.title ?? item.fileName}</p>
                   <p className="text-[10px] text-slate-400">
+                    {item.fileNames && item.fileNames.length > 1
+                      ? `${item.fileNames.length} files · `
+                      : item.title
+                        ? `${item.fileName} · `
+                        : ""}
                     Linked to: {item.linkedTo} · {item.when}
                   </p>
                 </div>
@@ -126,7 +131,7 @@ export function GrowthHubView() {
       <aside className="space-y-4">
         <div className="rounded-2xl bg-navy p-6 text-white">
           <p className="text-[10px] font-bold tracking-widest text-white/60 uppercase">
-            Overall Growth Progress
+            Overall Development Progress
           </p>
           <p className="mt-3 text-4xl font-bold">{progress}%</p>
           <p className="text-sm text-white/70">of targets met</p>

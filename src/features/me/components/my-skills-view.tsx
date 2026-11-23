@@ -29,7 +29,7 @@ export function MySkillsView() {
     const lines = [
       "Senior Solutions Architect",
       "Profile Version: V2.4 Published",
-      "Overall Match: 82%",
+      "Role Capability Alignment: 82%",
       "",
       ...portalSkills.map(
         (skill) =>
@@ -62,7 +62,7 @@ export function MySkillsView() {
           </p>
           <dl className="mt-6 space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <dt className="text-slate-500">Overall Match</dt>
+              <dt className="text-slate-500">Role Capability Alignment</dt>
               <dd className="font-bold text-navy">82%</dd>
             </div>
             <div className="flex items-center justify-between">

@@ -1,4 +1,4 @@
-export type TalentAssessmentType = "recruitment" | "promotion";
+export type TalentAssessmentType = "recruitment";
 
 export type Readiness = "Ready" | "Near Ready" | "Not Ready";
 
@@ -28,8 +28,6 @@ export type TalentMethod = {
 
 export const talentMetrics = [
   { label: "Candidates Assessed", value: "38", note: "Recruitment" },
-  { label: "Employees Assessed", value: "24", note: "Promotion" },
-  { label: "Role Readiness Rate", value: "68%", note: "Promotion" },
   { label: "Hiring Decisions Supported", value: "12", note: "Recruitment" },
   { label: "Assessment Utilisation", value: "+26pp", note: "Vs. previous period" },
 ] as const;
@@ -56,13 +54,6 @@ export const talentPipelineGradient = talentPipeline
   )
   .parts.join(", ");
 
-export const roleReadiness = [
-  { role: "Regional Sales Manager", percent: 78 },
-  { role: "Key Account Manager", percent: 72 },
-  { role: "Trade Marketing Manager", percent: 68 },
-  { role: "Supply Chain Manager", percent: 63 },
-] as const;
-
 export const talentAssessments: TalentAssessment[] = [
   {
     id: "david-kalu",
@@ -83,24 +74,6 @@ export const talentAssessments: TalentAssessment[] = [
     status: "Completed",
   },
   {
-    id: "tunde-martins",
-    name: "Tunde Martins",
-    type: "promotion",
-    targetRole: "Regional Sales Manager",
-    result: 76,
-    readiness: "Near Ready",
-    status: "Completed",
-  },
-  {
-    id: "funmi-nwosu",
-    name: "Funmi Nwosu",
-    type: "promotion",
-    targetRole: "Trade Marketing Manager",
-    result: 62,
-    readiness: "Not Ready",
-    status: "Completed",
-  },
-  {
     id: "ifeoma-obi",
     name: "Ifeoma Obi",
     type: "recruitment",
@@ -114,12 +87,7 @@ export const talentAssessments: TalentAssessment[] = [
 export const talentMethods: TalentMethod[] = [
   { id: "knowledge", title: "Knowledge & Test", detail: "Role and product knowledge" },
   { id: "scenario", title: "Scenario & Case Study", detail: "Business situations" },
-  {
-    id: "roleplay",
-    title: "AI Role Play",
-    detail: "Realistic interactions",
-    href: "/ai-coach/scenarios",
-  },
+  { id: "roleplay", title: "AI Role Play", detail: "Realistic interactions" },
   { id: "practical", title: "Practical Task", detail: "Job simulation" },
   { id: "behaviour", title: "Behavioural Assessment", detail: "Competencies and values" },
   { id: "manager", title: "Manager Review", detail: "For internal candidates" },
@@ -138,9 +106,7 @@ export function getTalentAssessment(id: string, type?: TalentAssessmentType) {
 }
 
 export function talentAssessmentHref(item: TalentAssessment) {
-  return item.type === "recruitment"
-    ? `/talent/recruitment/${item.id}`
-    : `/talent/promotion/${item.id}`;
+  return `/talent/recruitment/${item.id}`;
 }
 
 export function talentReportText() {
@@ -150,5 +116,5 @@ export function talentReportText() {
         `${item.name}\t${item.type}\t${item.targetRole}\t${item.result}%\t${item.readiness}\t${item.status}`,
     )
     .join("\n");
-  return `Talent Assessment & Selection\nCandidates assessed: 38\nEmployees assessed: 24\nRole readiness rate: 68%\nHiring decisions supported: 12\nAssessment utilisation: +26pp\n\nName\tType\tTarget role\tResult\tReadiness\tStatus\n${rows}\n`;
+  return `Talent Assessment & Selection\nCandidates assessed: 38\nHiring decisions supported: 12\nAssessment utilisation: +26pp\n\nName\tType\tTarget role\tResult\tReadiness\tStatus\n${rows}\n`;
 }

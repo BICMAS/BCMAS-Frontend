@@ -1,30 +1,63 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { ChevronRightIcon, FileIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { FileDropzone } from "@/components/shared/file-dropzone";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   addEvidence,
   listGoals,
   listTimeline,
 } from "@/features/me/services/portal-state";
+import type { TimelineEvent } from "@/features/me/data/portal";
 import { cn } from "@/lib/utils";
+
+type Attachment = { key: string; name: string; size: number };
+
+function formatSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function TimelineContent({ event }: { event: TimelineEvent }) {
+  return (
+    <>
+      <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+        {event.when}
+      </p>
+      <p className="flex items-center gap-1 font-bold text-navy">
+        {event.title}
+        {event.href ? <ChevronRightIcon className="size-3.5" aria-hidden /> : null}
+      </p>
+      <p className="text-sm text-slate-500">{event.detail}</p>
+    </>
+  );
+}
 
 export function ProgressTimelineView() {
   const goals = listGoals();
   const [events, setEvents] = useState(() => listTimeline());
   const [goalId, setGoalId] = useState(goals[0]?.id ?? "");
+  const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [pending, setPending] = useState(false);
+
+  const canSubmit = !pending && title.trim().length > 0 && attachments.length > 0;
 
   return (
     <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[70%_30%]">
       <section className="h-fit rounded-2xl border border-border-slate bg-white p-6 shadow-sm">
         <h1 className="text-xl font-bold text-navy">Submit Evidence</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Submit evidence of your learning and workplace application to
+          demonstrate your progress towards your target proficiency level.
+        </p>
         <label className="mt-4 block text-[10px] font-bold tracking-widest text-slate-400 uppercase">
           Linked Growth Area
           <select
@@ -39,16 +72,62 @@ export function ProgressTimelineView() {
             ))}
           </select>
         </label>
+        <label className="mt-4 block text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+          Evidence Title
+          <Input
+            className="mt-2 font-medium normal-case"
+            value={title}
+            maxLength={120}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="e.g. AI governance policy draft for the payments team"
+          />
+        </label>
         <div className="mt-4">
           <FileDropzone
+            multiple
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
             maxBytes={10 * 1024 * 1024}
             title="Add Practice Artifacts"
-            hint="Upload files (PDF, JPG, PNG). Max size: 10MB per file."
-            selectedName={fileName}
-            onFile={(file) => setFileName(file.name)}
+            hint="Attach one or more files (PDF, JPG, PNG, DOC). Max size: 10MB per file."
+            onFile={(file) =>
+              setAttachments((current) => {
+                const key = `${file.name}:${file.size}`;
+                if (current.some((item) => item.key === key)) return current;
+                return [...current, { key, name: file.name, size: file.size }];
+              })
+            }
             onInvalid={(message) => toast.error(message)}
           />
+          {attachments.length > 0 ? (
+            <ul className="mt-3 space-y-2" aria-label="Attached files">
+              {attachments.map((file) => (
+                <li
+                  key={file.key}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border-slate px-3 py-2"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-sm text-navy">
+                    <FileIcon className="size-4 shrink-0 text-slate-400" aria-hidden />
+                    <span className="truncate font-medium">{file.name}</span>
+                    <span className="shrink-0 text-xs text-slate-400">
+                      {formatSize(file.size)}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-navy"
+                    aria-label={`Remove ${file.name}`}
+                    onClick={() =>
+                      setAttachments((current) =>
+                        current.filter((item) => item.key !== file.key),
+                      )
+                    }
+                  >
+                    <XIcon className="size-4" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <label className="mt-4 block text-[10px] font-bold tracking-widest text-slate-400 uppercase">
           Practice Notes
@@ -63,19 +142,21 @@ export function ProgressTimelineView() {
         <Button
           type="button"
           className="mt-4 w-full"
-          disabled={pending || !fileName}
+          disabled={!canSubmit}
           onClick={async () => {
             const goal = goals.find((item) => item.id === goalId);
-            if (!fileName || !goal) return;
+            if (!canSubmit || !goal) return;
             setPending(true);
             try {
               await addEvidence({
-                fileName,
+                title: title.trim(),
+                fileNames: attachments.map((file) => file.name),
                 linkedTo: goal.title,
                 notes: notes.trim(),
               });
               setEvents(listTimeline());
-              setFileName(null);
+              setTitle("");
+              setAttachments([]);
               setNotes("");
               toast.success("Evidence submitted for review");
             } finally {
@@ -98,11 +179,16 @@ export function ProgressTimelineView() {
                   event.active ? "bg-green-lime" : "bg-navy",
                 )}
               />
-              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                {event.when}
-              </p>
-              <p className="font-bold text-navy">{event.title}</p>
-              <p className="text-sm text-slate-500">{event.detail}</p>
+              {event.href ? (
+                <Link
+                  href={event.href}
+                  className="-mx-2 block rounded-lg px-2 py-1 transition-colors hover:bg-slate-100"
+                >
+                  <TimelineContent event={event} />
+                </Link>
+              ) : (
+                <TimelineContent event={event} />
+              )}
             </li>
           ))}
         </ol>
