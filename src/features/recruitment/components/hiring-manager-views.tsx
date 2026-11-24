@@ -30,7 +30,7 @@ import {
   vacanciesForHiringManager,
   vacancyProblems,
 } from "../services/vacancies";
-import type { Vacancy } from "../types";
+import { CAMERA_POLICY_LABEL, type Vacancy } from "../types";
 import {
   HiringManagerGate,
   VacancyStatusBadge,
@@ -189,6 +189,8 @@ function ApprovalDetail({
               ? `${vacancy.stages.interview.questionSet ? `${vacancy.stages.interview.questionSet.name} v${vacancy.stages.interview.questionSet.version}` : "No question set"} · pass at ${vacancy.stages.interview.threshold ?? "—"}%`
               : "Not used"}
           </dd>
+          <dt className="text-slate-500">Candidate camera</dt>
+          <dd className="font-semibold text-navy">{CAMERA_POLICY_LABEL[vacancy.camera]}</dd>
         </dl>
         <p className="mt-4 text-xs text-slate-500">
           Candidates at or above every threshold are qualified for your review. You still make the shortlist decision, and

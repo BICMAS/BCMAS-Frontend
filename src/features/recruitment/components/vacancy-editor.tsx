@@ -16,7 +16,7 @@ import {
   hiringManagerOptions,
   type VacancyDetails,
 } from "../services/vacancies";
-import { EMPLOYMENT_TYPES, type EmploymentType } from "../types";
+import { CAMERA_POLICY_LABEL, EMPLOYMENT_TYPES, type CameraPolicy, type EmploymentType } from "../types";
 
 const fieldClass =
   "mt-1 h-10 w-full rounded-lg border border-border-slate bg-white px-3 text-sm text-navy outline-none disabled:bg-slate-50 disabled:text-slate-500";
@@ -293,6 +293,27 @@ export function VacancyEditor({
             The interview asks consistent, role-linked questions and scores answer content only — never appearance,
             accent or expression. Candidates can answer by voice or text.
           </p>
+          {value.stages.assessment.enabled || value.stages.interview.enabled ? (
+            <label className="block max-w-xl text-xs font-bold text-navy">
+              Candidate camera (assessment and interview)
+              <select
+                className={fieldClass}
+                disabled={readOnly}
+                value={value.camera}
+                onChange={(e) => set("camera", e.target.value as CameraPolicy)}
+              >
+                {(Object.keys(CAMERA_POLICY_LABEL) as CameraPolicy[]).map((p) => (
+                  <option key={p} value={p}>
+                    {CAMERA_POLICY_LABEL[p]}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block font-normal text-slate-400">
+                BCMS logs only when the camera goes on and off: no picture is kept and scores never change. Required means candidates
+                cannot see questions until it is on; you can allow a candidate to continue without it.
+              </span>
+            </label>
+          ) : null}
         </div>
       </TabsContent>
 

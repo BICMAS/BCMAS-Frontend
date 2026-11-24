@@ -17,6 +17,7 @@ import { getAssessmentVersion } from "@/features/assessment-library/services/org
 import { candidateView } from "@/features/assessment-library/services/versioning";
 import type { TemplateVersion } from "@/features/assessment-library/types";
 
+import { cameraEmailNote, newCameraLog, requireCameraToStart } from "./camera";
 import { getVacancy, recruitmentStore, RecruitmentError } from "./vacancies";
 import type {
   Application,
@@ -25,6 +26,7 @@ import type {
   AttemptAnswer,
   AttemptEvent,
   AttemptScore,
+  CameraPolicy,
   Vacancy,
 } from "../types";
 
@@ -96,7 +98,7 @@ function email(attempt: AssessmentAttempt, app: Application, kind: "assessment_i
         : `Assessment received: ${vacancy?.title ?? ""} (${app.reference})`,
     body:
       kind === "assessment_invitation"
-        ? `Dear ${app.fullName},\n\nPlease complete the ${attempt.assessmentName} assessment (about ${attempt.durationMinutes} minutes) by ${expires}: ${link}\n\nThe link is personal to you and works once.\n\n${org.name} Recruitment`
+        ? `Dear ${app.fullName},\n\nPlease complete the ${attempt.assessmentName} assessment (about ${attempt.durationMinutes} minutes) by ${expires}: ${link}\n\nThe link is personal to you and works once.${cameraEmailNote(attempt.camera.policy)}\n\n${org.name} Recruitment`
         : `Dear ${app.fullName},\n\nThank you. We have received your assessment and will email you about the next steps.\n\n${org.name} Recruitment`,
     kind,
     at: nowIso(),
@@ -148,6 +150,7 @@ export function inviteToAssessment(organisationId: string, applicationId: string
     answers: {},
     flagged: [],
     events: [],
+    camera: newCameraLog(vacancy.camera),
     writtenScores: {},
     score: null,
     resentCount: 0,
@@ -215,6 +218,8 @@ export type CandidateAssessment = {
   flagged: string[];
   position: number;
   remainingSeconds: number | null;
+  /** The candidate's own camera state (no log). */
+  camera: { policy: CameraPolicy; waived: boolean; agreed: boolean };
   supportEmail: string;
 };
 
@@ -242,6 +247,7 @@ export function getCandidateAssessment(token: string): CandidateAssessment | nul
     flagged: [...attempt.flagged],
     position: attempt.position,
     remainingSeconds: remaining,
+    camera: { policy: attempt.camera.policy, waived: attempt.camera.waived !== null, agreed: attempt.camera.agreedAt !== null },
     supportEmail: `recruitment@${org.shortName.toLowerCase()}.example`,
   };
 }
@@ -259,6 +265,7 @@ export function startAssessment(token: string) {
   if (attempt.status === "expired") throw new RecruitmentError("This assessment link has expired. Contact the recruitment team for a new link.");
   if (attempt.status === "submitted") throw new RecruitmentError("You have already submitted this assessment.");
   if (attempt.status === "invited") {
+    requireCameraToStart(attempt.camera);
     attempt.status = "in_progress";
     attempt.startedAt = nowIso();
     event(attempt, "started");

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { assessmentLink, hrAttemptView, scoreWrittenAnswer } from "../services/delivery";
+import { CameraLogPanel } from "./camera-log";
 import { formatDateTime, runAction } from "./recruitment-shared";
 
 const EVENT_LABEL: Record<string, string> = {
@@ -141,6 +142,8 @@ export function AssessmentResults({
           })}
         </section>
       ) : null}
+
+      <CameraLogPanel organisationId={organisationId} applicationId={applicationId} stage="assessment" actor={actor} record={attempt} />
 
       <section className="rounded-2xl border border-border-slate bg-white p-5" aria-label="Attempt events">
         <h2 className="font-bold text-navy">Attempt and technical events</h2>

@@ -13,6 +13,35 @@ type AiContextValue = { client: AiClient; identity: AiIdentity };
 type Settled = { key: string; value?: AiContextValue; error?: unknown };
 
 const AiContext = createContext<AiContextValue | null>(null);
+const OnDemandClientContext = createContext<AiClient | null>(null);
+
+/** An AI client that connects only when one of its methods is called. */
+function onDemandClient(): AiClient {
+  let connecting: Promise<AiClient> | null = null;
+  const connect = () => {
+    connecting ??= createAiClient().catch((error: unknown) => {
+      connecting = null; // Try again on the next call.
+      throw error;
+    });
+    return connecting;
+  };
+  return new Proxy({} as AiClient, {
+    get: (_target, name) => async (...args: unknown[]) => {
+      const client = await connect();
+      const method = Reflect.get(client, name) as (...a: unknown[]) => unknown;
+      return method.apply(client, args);
+    },
+  });
+}
+
+/**
+ * For screens that work without AI and only offer AI actions (useAiAction): the page always
+ * shows, and an unavailable AI service affects only the action that needed it.
+ */
+export function AiActionsProvider({ children }: { children: ReactNode }) {
+  const [client] = useState(onDemandClient);
+  return <OnDemandClientContext.Provider value={client}>{children}</OnDemandClientContext.Provider>;
+}
 
 /**
  * Provides the AI client and the verified identity (GET /v1/me/identity) to AI screens.
@@ -55,5 +84,9 @@ export function useAi(): AiContextValue {
 }
 
 export function useAiClient(): AiClient {
-  return useAi().client;
+  const full = useContext(AiContext);
+  const onDemand = useContext(OnDemandClientContext);
+  const client = full?.client ?? onDemand;
+  if (!client) throw new Error("useAiClient must be used inside <AiClientProvider> or <AiActionsProvider>");
+  return client;
 }

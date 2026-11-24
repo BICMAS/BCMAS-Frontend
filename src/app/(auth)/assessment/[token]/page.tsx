@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { CandidateAssessmentView } from "@/features/recruitment";
+import { BrowserOnly, CandidateAssessmentView } from "@/features/recruitment";
 
 export const metadata: Metadata = {
   title: "Assessment",
@@ -24,5 +24,9 @@ export default function Page({ params }: PageProps) {
 
 async function Assessment({ params }: PageProps) {
   const { token } = await params;
-  return <CandidateAssessmentView token={token} />;
+  return (
+    <BrowserOnly>
+      <CandidateAssessmentView token={token} />
+    </BrowserOnly>
+  );
 }

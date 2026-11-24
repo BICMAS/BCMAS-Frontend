@@ -64,6 +64,7 @@ function seed(): {
   const base = {
     organisationId: GEC,
     consentText: DEFAULT_CONSENT,
+    camera: "optional" as const,
     owner: HRBP,
     hiringManager: MICHAEL,
     publicToken: null,
@@ -188,7 +189,7 @@ Diploma in Business Administration, 2022`,
 /* ── store ─────────────────────────────────────────────────────────────── */
 
 /** Bump the version when the stored shape changes, so older saved sample data is not misread. */
-const STORAGE_KEY = "bcms-recruitment-v5";
+const STORAGE_KEY = "bcms-recruitment-v6";
 let state: ReturnType<typeof seed> | null = null;
 let loaded = false;
 let revision = 0;
@@ -413,6 +414,7 @@ export type VacancyDetails = Pick<
   | "roleId"
   | "assessment"
   | "stages"
+  | "camera"
   | "consentText"
   | "hiringManager"
 >;
@@ -429,6 +431,7 @@ export function emptyDetails(): VacancyDetails {
     roleId: null,
     assessment: null,
     stages: { assessment: { enabled: true, threshold: 70 }, interview: { enabled: false, threshold: null, questionSet: null } },
+    camera: "off",
     consentText: DEFAULT_CONSENT,
     hiringManager: null,
   };
@@ -455,6 +458,7 @@ export function createVacancy(organisationId: string, details: VacancyDetails, a
     roleTitle: null,
     assessment: null,
     stages: emptyDetails().stages,
+    camera: "off",
     consentText: DEFAULT_CONSENT,
     hiringManager: null,
     owner: actor,

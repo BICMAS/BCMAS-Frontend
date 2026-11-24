@@ -9,3 +9,4 @@ export { CandidateInterviewView } from "./components/candidate-interview-view";
 export { CandidateReportView, HiringReviewListView, ShortlistView } from "./components/hiring-review-views";
 export { RecruitmentInsightsView } from "./components/recruitment-insights-view";
 export { RecruitmentOverviewView } from "./components/recruitment-overview-view";
+export { BrowserOnly } from "./components/browser-only";

@@ -34,6 +34,32 @@ export type StageConfig = {
   interview: { enabled: boolean; threshold: number | null; questionSet: AssessmentRef | null };
 };
 
+/** Whether candidates keep their camera on during the assessment and interview. */
+export type CameraPolicy = "off" | "optional" | "required";
+
+export const CAMERA_POLICY_LABEL: Record<CameraPolicy, string> = {
+  off: "Off",
+  optional: "Optional",
+  required: "Required",
+};
+
+export type CameraEvent = {
+  type: "agreed" | "on" | "off" | "alternative_requested" | "waived";
+  at: string;
+  note?: string;
+};
+
+/** Camera on/off log for one session. Holds no image, video or audio, and is never scored. */
+export type CameraLog = {
+  /** The vacancy's policy when the candidate was invited. */
+  policy: CameraPolicy;
+  agreedAt: string | null;
+  /** HR allowed this candidate to continue without a camera. */
+  waived: { by: string; at: string; reason: string } | null;
+  on: boolean;
+  events: CameraEvent[];
+};
+
 /** What the Hiring Manager approved. Kept for every candidate attempt and decision (guide §9). */
 export type ThresholdSnapshot = {
   version: number;
@@ -77,6 +103,7 @@ export type Vacancy = {
   roleTitle: string | null;
   assessment: AssessmentRef | null;
   stages: StageConfig;
+  camera: CameraPolicy;
   consentText: string;
   hiringManager: { userId: string; name: string } | null;
   owner: string;
@@ -233,6 +260,7 @@ export type AssessmentAttempt = {
   answers: Record<string, AttemptAnswer>;
   flagged: string[];
   events: AttemptEvent[];
+  camera: CameraLog;
   writtenScores: Record<string, WrittenScore>;
   score: AttemptScore | null;
   resentCount: number;
@@ -296,6 +324,7 @@ export type InterviewSession = {
   position: number;
   answers: Record<string, InterviewAnswerRecord>;
   events: InterviewEvent[];
+  camera: CameraLog;
   resentCount: number;
   aiSuggestion: {
     scores: Record<string, InterviewSuggestion>;

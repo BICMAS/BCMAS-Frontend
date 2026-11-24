@@ -7,7 +7,7 @@
  *    threshold snapshot). Rubrics never reach the candidate.
  *  - Consent is obtained and recorded before the interview starts; a text alternative is always
  *    available; candidates can repeat a question (up to 2 times), report a technical problem or
- *    ask to reschedule. No video is captured; spoken answers are transcribed to text.
+ *    ask to reschedule. No video is captured (camera.ts logs on/off only); spoken answers are transcribed to text.
  *  - Only answer content is scored. The AI talent agent (talent.score_interview) suggests a score
  *    per answer with evidence and confidence; a person confirms every score. Progression follows
  *    the approved interview threshold, with the reason recorded.
@@ -17,9 +17,10 @@ import type { InterviewScoring, InterviewScoringRequest } from "@ai/contracts";
 import { getMockOrganisation } from "@/config/mock-users";
 import { getAssessmentVersion } from "@/features/assessment-library/services/org-library";
 
+import { cameraEmailNote, newCameraLog, requireCameraToStart } from "./camera";
 import { attemptFor, SCORING_RULE_VERSION } from "./delivery";
 import { getVacancy, recruitmentStore, RecruitmentError } from "./vacancies";
-import type { Application, ApplicationStage, InterviewEvent, InterviewSession } from "../types";
+import type { Application, ApplicationStage, CameraPolicy, InterviewEvent, InterviewSession } from "../types";
 
 export const INTERVIEW_INVITATION_DAYS = 7;
 export const MAX_REPEATS = 2;
@@ -77,7 +78,7 @@ function email(session: InterviewSession, app: Application, kind: "interview_inv
         : `Interview received: ${vacancy?.title ?? ""} (${app.reference})`,
     body:
       kind === "interview_invitation"
-        ? `Dear ${app.fullName},\n\nYou are invited to a short structured interview with our AI interviewer (about ${questionSet(session).durationMinutes} minutes). You can answer by speaking or typing. Please complete it by ${new Date(session.expiresAt).toLocaleDateString()}: ${interviewLink(session.token)}\n\n${org.name} Recruitment`
+        ? `Dear ${app.fullName},\n\nYou are invited to a short structured interview with our AI interviewer (about ${questionSet(session).durationMinutes} minutes). You can answer by speaking or typing. Please complete it by ${new Date(session.expiresAt).toLocaleDateString()}: ${interviewLink(session.token)}${cameraEmailNote(session.camera.policy)}\n\n${org.name} Recruitment`
         : `Dear ${app.fullName},\n\nThank you for completing the interview. We will email you about the next steps.\n\n${org.name} Recruitment`,
     kind,
     at: nowIso(),
@@ -139,6 +140,7 @@ export function inviteToInterview(organisationId: string, applicationId: string,
     position: 0,
     answers: {},
     events: [],
+    camera: newCameraLog(vacancy.camera),
     resentCount: 0,
     aiSuggestion: null,
     confirmedScores: {},
@@ -198,6 +200,8 @@ export type CandidateInterview = {
   questions: Array<{ id: string; text: string; competency: string }>;
   answers: Record<string, { text: string; repeats: number }>;
   position: number;
+  /** The candidate's own camera state (no log). */
+  camera: { policy: CameraPolicy; waived: boolean; agreed: boolean };
   supportEmail: string;
 };
 
@@ -219,6 +223,7 @@ export function getCandidateInterview(token: string): CandidateInterview | null 
     questions: (set?.items ?? []).map((i) => ({ id: i.id, text: i.text, competency: i.competency })),
     answers: Object.fromEntries(Object.entries(session.answers).map(([id, a]) => [id, { text: a.text, repeats: a.repeats }])),
     position: session.position,
+    camera: { policy: session.camera.policy, waived: session.camera.waived !== null, agreed: session.camera.agreedAt !== null },
     supportEmail: `recruitment@${org.shortName.toLowerCase()}.example`,
   };
 }
@@ -252,6 +257,7 @@ export function startInterview(token: string) {
   requireOpen(session);
   if (!session.consentAt) throw new RecruitmentError("Please read and agree to how the interview works first.");
   if (session.status === "invited") {
+    requireCameraToStart(session.camera);
     session.status = "in_progress";
     session.startedAt = nowIso();
     event(session, "started");

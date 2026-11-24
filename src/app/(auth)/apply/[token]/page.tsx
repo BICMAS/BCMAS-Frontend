@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { PublicApplicationView } from "@/features/recruitment";
+import { BrowserOnly, PublicApplicationView } from "@/features/recruitment";
 
 export const metadata: Metadata = {
   title: "Apply",
@@ -24,5 +24,9 @@ export default function Page({ params }: PageProps) {
 
 async function Application({ params }: PageProps) {
   const { token } = await params;
-  return <PublicApplicationView token={token} />;
+  return (
+    <BrowserOnly>
+      <PublicApplicationView token={token} />
+    </BrowserOnly>
+  );
 }

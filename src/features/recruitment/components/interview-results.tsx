@@ -16,6 +16,7 @@ import {
   interviewScoringRequest,
   saveInterviewSuggestion,
 } from "../services/interview";
+import { CameraLogPanel } from "./camera-log";
 import { formatDateTime, runAction } from "./recruitment-shared";
 
 const EVENT_LABEL: Record<string, string> = {
@@ -217,6 +218,8 @@ export function InterviewResults({
           </AiDisclaimer>
         </section>
       ) : null}
+
+      <CameraLogPanel organisationId={organisationId} applicationId={applicationId} stage="interview" actor={actor} record={session} />
 
       <section className="rounded-2xl border border-border-slate bg-white p-5" aria-label="Interview events">
         <h2 className="font-bold text-navy">Consent and technical events</h2>

@@ -29,6 +29,7 @@ import {
   submitAssessment,
   toggleFlag,
 } from "../services/delivery";
+import { CameraSetup, CameraStrip, useSessionCamera } from "./candidate-camera";
 import { formatDate } from "./recruitment-shared";
 
 /** Candidate assessment experience (guide §13). No login: the emailed link is the credential. */
@@ -46,6 +47,8 @@ export function CandidateAssessmentView({ token }: { token: string }) {
   const [saved, setSaved] = useState<string | null>(null);
   const textTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  const { camera, blocked } = useSessionCamera("assessment", token, view);
 
   // Countdown: refresh once a second while the candidate is working.
   useEffect(() => {
@@ -141,8 +144,9 @@ export function CandidateAssessmentView({ token }: { token: string }) {
           </p>
           <p className="text-xs text-slate-500">This link is personal to you and expires on {formatDate(view.expiresAt)}.</p>
         </section>
+        <CameraSetup stage="assessment" token={token} value={view.camera} camera={camera} supportEmail={view.supportEmail} />
         {error ? <ErrorText text={error} /> : null}
-        <Button type="button" className="mt-6 w-full sm:w-auto" onClick={() => attempt(() => startAssessment(token))}>
+        <Button type="button" className="mt-6 w-full sm:w-auto" disabled={blocked} onClick={() => attempt(() => startAssessment(token))}>
           Start Assessment
         </Button>
       </Card>
@@ -187,6 +191,14 @@ export function CandidateAssessmentView({ token }: { token: string }) {
         </p>
       </div>
 
+      {blocked ? (
+        <CameraSetup stage="assessment" token={token} value={view.camera} camera={camera} supportEmail={view.supportEmail} paused />
+      ) : (
+        <CameraStrip value={view.camera} camera={camera} />
+      )}
+
+      {/* Hidden, not removed, while a required camera is off: unsaved text is kept. */}
+      <div hidden={blocked}>
       <div className="mt-6" aria-label="Progress">
         <p className="text-xs font-semibold text-slate-500">
           Question {index + 1} of {view.items.length} · {answered} answered
@@ -275,14 +287,15 @@ export function CandidateAssessmentView({ token }: { token: string }) {
       </section>
 
       {error ? <ErrorText text={error} /> : null}
+      </div>
 
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Button type="button" variant="ghost" onClick={() => setSupport(true)}>
           <LifeBuoyIcon aria-hidden />
           Request Support
         </Button>
-        <div className="flex gap-2">
-          <Button type="button" variant="secondary" disabled={index === 0} onClick={() => go(index - 1)}>
+        <div className={cn("flex gap-2", blocked && "hidden")}>
+          <Button type="button" variant="secondary" disabled={blocked || index === 0} onClick={() => go(index - 1)}>
             Previous
           </Button>
           {index < view.items.length - 1 ? (
@@ -304,7 +317,7 @@ export function CandidateAssessmentView({ token }: { token: string }) {
         </div>
       </div>
 
-      <Dialog open={confirming} onOpenChange={setConfirming}>
+      <Dialog open={confirming && !blocked} onOpenChange={setConfirming}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Submit your assessment?</DialogTitle>

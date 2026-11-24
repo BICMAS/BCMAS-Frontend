@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { AiClientProvider } from "@/features/ai";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { AiActionsProvider } from "@/features/ai";
 import { CandidateProfileView } from "@/features/recruitment";
 
 export const metadata: Metadata = {
@@ -11,12 +13,20 @@ type PageProps = {
   params: Promise<{ candidateId: string }>;
 };
 
-/** CV analysis calls the AI talent agent, so the profile needs the shared AI client. */
-export default async function Page({ params }: PageProps) {
+/** AI is used only for CV analysis and score suggestions; the profile works without it. */
+export default function Page({ params }: PageProps) {
+  return (
+    <Suspense fallback={<LoadingSkeleton rows={4} />}>
+      <Candidate params={params} />
+    </Suspense>
+  );
+}
+
+async function Candidate({ params }: PageProps) {
   const { candidateId } = await params;
   return (
-    <AiClientProvider>
+    <AiActionsProvider>
       <CandidateProfileView candidateId={candidateId} />
-    </AiClientProvider>
+    </AiActionsProvider>
   );
 }

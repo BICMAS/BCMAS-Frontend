@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { CandidateInterviewView } from "@/features/recruitment";
+import { BrowserOnly, CandidateInterviewView } from "@/features/recruitment";
 
 export const metadata: Metadata = {
   title: "Interview",
@@ -24,5 +24,9 @@ export default function Page({ params }: PageProps) {
 
 async function Interview({ params }: PageProps) {
   const { token } = await params;
-  return <CandidateInterviewView token={token} />;
+  return (
+    <BrowserOnly>
+      <CandidateInterviewView token={token} />
+    </BrowserOnly>
+  );
 }

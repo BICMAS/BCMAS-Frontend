@@ -31,6 +31,7 @@ import {
   submitInterview,
 } from "../services/interview";
 import { RecruitmentError, recruitmentRevision, subscribeRecruitment } from "../services/vacancies";
+import { CameraSetup, CameraStrip, useSessionCamera } from "./candidate-camera";
 import { formatDate } from "./recruitment-shared";
 
 export const AI_INTERVIEWER = { name: "Ada", role: "AI interviewer" } as const;
@@ -44,6 +45,8 @@ export function CandidateInterviewView({ token }: { token: string }) {
   }, [token, revision]);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<"intro" | "equipment">("intro");
+
+  const { camera, blocked } = useSessionCamera("interview", token, view);
 
   const run = (fn: () => void) => {
     try {
@@ -111,7 +114,9 @@ export function CandidateInterviewView({ token }: { token: string }) {
             {view.consentGiven ? (
               <p className="mt-4 text-sm text-slate-600">You have agreed to how the interview works. Check your equipment, then start.</p>
             ) : null}
+            <CameraSetup stage="interview" token={token} value={view.camera} camera={camera} supportEmail={view.supportEmail} />
             <Equipment
+              cameraBlocked={blocked}
               initialMode={view.answerMode ?? "text"}
               onReady={(mode, note) => {
                 if (run(() => giveConsent(token, mode, note))) run(() => startInterview(token));
@@ -127,7 +132,12 @@ export function CandidateInterviewView({ token }: { token: string }) {
   return (
     <Card wide>
       {header}
-      <Interview token={token} view={view} run={run} />
+      {blocked ? (
+        <CameraSetup stage="interview" token={token} value={view.camera} camera={camera} supportEmail={view.supportEmail} paused />
+      ) : (
+        <CameraStrip value={view.camera} camera={camera} />
+      )}
+      <Interview token={token} view={view} run={run} paused={blocked} />
       {error ? <ErrorText text={error} /> : null}
     </Card>
   );
@@ -174,7 +184,7 @@ function Intro({
           <li>You can speak your answers (turned into text in your browser) or type them. You can switch at any time.</li>
           <li>
             Only the content of your answers is assessed, against an approved scoring guide. Your appearance, accent, way of speaking,
-            expressions and emotions are never assessed. No video is recorded.
+            expressions and emotions are never assessed. No video is recorded; if a camera is used, its picture stays on your device.
           </li>
           <li>AI suggests scores and a person from the recruitment team checks and confirms every score.</li>
           <li>If something goes wrong you can report a problem or ask to reschedule; your answers are kept.</li>
@@ -232,7 +242,16 @@ function Intro({
   );
 }
 
-function Equipment({ initialMode = "text", onReady }: { initialMode?: "voice" | "text"; onReady: (mode: "voice" | "text", note: string) => void }) {
+function Equipment({
+  initialMode = "text",
+  cameraBlocked,
+  onReady,
+}: {
+  initialMode?: "voice" | "text";
+  /** A required camera is not on yet. */
+  cameraBlocked: boolean;
+  onReady: (mode: "voice" | "text", note: string) => void;
+}) {
   const [mode, setMode] = useState<"voice" | "text">(initialMode);
   const [heard, setHeard] = useState("");
   const mic = useSpeechInput((text) => setHeard((h) => `${h} ${text}`.trim()));
@@ -284,7 +303,7 @@ function Equipment({ initialMode = "text", onReady }: { initialMode?: "voice" | 
       ) : null}
       <Button
         type="button"
-        disabled={!online || !voiceReady}
+        disabled={!online || !voiceReady || cameraBlocked}
         onClick={() => onReady(mode, mode === "voice" ? "Microphone tested." : "Typing chosen.")}
       >
         Start Interview
@@ -293,7 +312,18 @@ function Equipment({ initialMode = "text", onReady }: { initialMode?: "voice" | 
   );
 }
 
-function Interview({ token, view, run }: { token: string; view: View; run: (fn: () => void) => boolean }) {
+function Interview({
+  token,
+  view,
+  run,
+  paused,
+}: {
+  token: string;
+  view: View;
+  run: (fn: () => void) => boolean;
+  /** Hidden because a required camera is off; typed text is kept. */
+  paused: boolean;
+}) {
   const index = Math.min(view.position, view.questions.length - 1);
   const question = view.questions[index]!;
   const speech = useCoachSpeech();
@@ -319,11 +349,17 @@ function Interview({ token, view, run }: { token: string; view: View; run: (fn: 
 
   // The interviewer reads each new question aloud once (when voice is on).
   useEffect(() => {
-    if (!speech.enabled || spokenFor.current === question.id) return;
+    if (paused || !speech.enabled || spokenFor.current === question.id) return;
     spokenFor.current = question.id;
     speech.speak(question.text);
-  }, [question.id, question.text, speech]);
+  }, [paused, question.id, question.text, speech]);
 
+  // Nothing is asked or heard while the interview is paused.
+  useEffect(() => {
+    if (!paused) return;
+    if (speech.speaking) speech.stop();
+    if (mic.listening) mic.stop();
+  }, [paused, speech, mic]);
 
   const presence: CoachPresence = mic.listening ? "listening" : speech.speaking ? "speaking" : "ready";
 
@@ -334,7 +370,7 @@ function Interview({ token, view, run }: { token: string; view: View; run: (fn: 
   }
 
   return (
-    <div className="mt-6 space-y-5">
+    <div hidden={paused} className="mt-6 space-y-5">
       <CoachStage name={AI_INTERVIEWER.name} role={`${AI_INTERVIEWER.role} · ${view.vacancyTitle}`} presence={presence} voice={speech} />
       <div>
         <p className="text-xs font-semibold text-slate-500">
@@ -413,7 +449,7 @@ function Interview({ token, view, run }: { token: string; view: View; run: (fn: 
         </div>
       </div>
 
-      <Dialog open={confirming} onOpenChange={setConfirming}>
+      <Dialog open={confirming && !paused} onOpenChange={setConfirming}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>End the interview?</DialogTitle>

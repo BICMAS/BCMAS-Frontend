@@ -58,8 +58,8 @@ import {
 import { VacancyEditor } from "./vacancy-editor";
 
 function detailsOf(v: Vacancy): VacancyDetails {
-  const { title, department, location, employmentType, openings, summary, closingDate, roleId, assessment, stages, consentText, hiringManager } = v;
-  return structuredClone({ title, department, location, employmentType, openings, summary, closingDate, roleId, assessment, stages, consentText, hiringManager });
+  const { title, department, location, employmentType, openings, summary, closingDate, roleId, assessment, stages, camera, consentText, hiringManager } = v;
+  return structuredClone({ title, department, location, employmentType, openings, summary, closingDate, roleId, assessment, stages, camera, consentText, hiringManager });
 }
 
 /* ── Create ─────────────────────────────────────────────────────────────── */

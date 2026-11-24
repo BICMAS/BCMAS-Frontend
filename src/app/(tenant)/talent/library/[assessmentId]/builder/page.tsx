@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AiClientProvider } from "@/features/ai";
+import { AiActionsProvider } from "@/features/ai";
 import { AiBuilderView } from "@/features/assessment-library";
 
 export const metadata: Metadata = {
@@ -15,8 +15,8 @@ type PageProps = {
 export default async function Page({ params }: PageProps) {
   const { assessmentId } = await params;
   return (
-    <AiClientProvider>
+    <AiActionsProvider>
       <AiBuilderView assessmentId={assessmentId} />
-    </AiClientProvider>
+    </AiActionsProvider>
   );
 }
