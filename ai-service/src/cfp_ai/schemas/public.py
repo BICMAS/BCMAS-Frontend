@@ -107,6 +107,8 @@ CapabilityId = Literal[
     "talent.draft_report",  # T4
     "talent.analyze_evidence",  # T5
     "talent.insights_turn",  # T6
+    "talent.analyze_cv",  # T7
+    "talent.score_interview",  # T8
 ]
 
 Role = Literal[

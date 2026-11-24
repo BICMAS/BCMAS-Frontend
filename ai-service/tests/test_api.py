@@ -65,7 +65,7 @@ def test_capabilities_lists_all_public_capabilities(client: TestClient, token: A
     assert body["tenant_id"] == "org-gec"
     assert body["contract_version"] == "1.0.0-rc.1"
     caps = {c["capability"]: c for c in body["capabilities"]}
-    assert len(caps) == 18
+    assert len(caps) == 20
     assert "system.diagnostics" not in caps  # internal capabilities are not listed
     # Declared-but-unimplemented capabilities → unavailable with reason ai_disabled.
     assert caps["dev_plan.draft_cohort_pathway"]["availability"] == "unavailable"

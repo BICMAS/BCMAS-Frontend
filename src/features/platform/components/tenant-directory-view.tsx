@@ -109,14 +109,9 @@ export function TenantDirectoryView() {
       ),
     },
     {
-      id: "region",
+      id: "infrastructure",
       header: "Infrastructure",
-      cell: (row) => (
-        <div className="text-[10px] text-slate-500">
-          <p>Region: {row.region}</p>
-          <p className="mt-0.5">Shards: {row.shards} Active</p>
-        </div>
-      ),
+      cell: (row) => <p className="text-[10px] text-slate-500">Shards: {row.shards} Active</p>,
     },
     {
       id: "status",

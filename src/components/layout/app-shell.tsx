@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { Suspense, useCallback, useState, type ReactNode } from "react";
 
 import { AppHeader } from "@/components/layout/app-header";
@@ -11,7 +12,14 @@ import {
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { ShellFallback } from "@/components/layout/shell-fallback";
-import { getNavigationConfig } from "@/config/navigation";
+import { FeatureUnavailable, PageUnavailable } from "@/components/layout/feature-unavailable";
+import {
+  featureForPath,
+  getNavigationConfig,
+  isPathAllowed,
+  isPathBlockedForPortal,
+} from "@/config/navigation";
+import { useTenantEntitlements } from "@/features/platform/use-platform-store";
 import { useSessionStore } from "@/stores/session-store";
 import { useUiStore } from "@/stores/ui-store";
 import { cn } from "@/lib/utils";
@@ -23,7 +31,19 @@ type AppShellProps = {
 
 function AppShellInner({ children, className }: AppShellProps) {
   const user = useSessionStore((s) => s.user);
-  const navigation = getNavigationConfig(user.portal);
+  const organisationId = useSessionStore((s) => s.organisationId);
+  const entitlements = useTenantEntitlements(organisationId);
+  const organisationName = useSessionStore((s) => s.organisation.name);
+  const navigation = getNavigationConfig(user.portal, entitlements);
+  const pathname = usePathname();
+  // Pages of switched-off features are blocked by URL too, not just hidden from the menus.
+  const blockedFeature =
+    entitlements && pathname && !isPathAllowed(pathname, entitlements) ? featureForPath(pathname) : null;
+  // Some pages are not part of a role's work at all (e.g. Admin Hub pages for an HRBP).
+  const blockedForRole = Boolean(pathname && isPathBlockedForPortal(pathname, user.portal));
+  // Search leaves out the same pages, so it never offers a page that would be blocked.
+  const canOpen = (href: string) =>
+    !isPathBlockedForPortal(href, user.portal) && (!entitlements || isPathAllowed(href, entitlements));
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const mobileNavOpen = useUiStore((s) => s.mobileNavOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
@@ -63,7 +83,21 @@ function AppShellInner({ children, className }: AppShellProps) {
           id="content"
           className="relative min-h-0 flex-1 overflow-y-auto bg-bg-slate p-5 md:p-6 lg:p-8 xl:p-10"
         >
-          {children}
+          {blockedForRole ? (
+            <PageUnavailable
+              title="This page isn't part of your role"
+              message="Your role doesn't include this page. Ask your Organisation Admin if you need access."
+              homeHref={navigation.defaultHref}
+            />
+          ) : blockedFeature ? (
+            <FeatureUnavailable
+              feature={blockedFeature}
+              organisationName={organisationName}
+              homeHref={navigation.defaultHref}
+            />
+          ) : (
+            children
+          )}
         </main>
       </div>
 
@@ -76,7 +110,7 @@ function AppShellInner({ children, className }: AppShellProps) {
         user={user}
       />
 
-      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} canOpen={canOpen} />
     </div>
   );
 }

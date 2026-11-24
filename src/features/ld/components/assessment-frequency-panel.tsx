@@ -18,8 +18,13 @@ type SavedProgramme = { scope: string; cycles: CyclesPerYear; year: number };
 /**
  * Configure Assessment Frequency: choose the scope (a department or the whole organisation),
  * how many cycles per year, and the year; BCMS shows the resulting monthly timetable.
+ * With readOnly (HRBP), the timetable is shown but cannot be changed or saved.
  */
-export function AssessmentFrequencyPanel() {
+export function AssessmentFrequencyPanel({
+  readOnly = false,
+}: {
+  readOnly?: boolean;
+}) {
   const thisYear = new Date().getFullYear();
   const years = [thisYear, thisYear + 1];
   const [scope, setScope] = useState(ORGANISATION_SCOPE);
@@ -35,17 +40,24 @@ export function AssessmentFrequencyPanel() {
       className="rounded-2xl border border-border-slate bg-white p-6 shadow-sm"
     >
       <h2 id="assessment-frequency" className="text-lg font-bold text-navy">
-        Configure Assessment Frequency
+        {readOnly ? "Assessment Frequency" : "Configure Assessment Frequency"}
       </h2>
       <p className="mt-1 text-sm text-slate-500">
-        Choose how many capability assessment cycles to run in a year, for one department or the entire
-        organisation. The timetable below shows everyone when to complete their assessments.
+        {readOnly
+          ? "The assessment timetable set by your Organisation Admin. You can view it but not change it."
+          : "Choose how many capability assessment cycles to run in a year, for one department or the entire organisation. The timetable below shows everyone when to complete their assessments."}
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="space-y-5">
+        <fieldset
+          disabled={readOnly}
+          className="min-w-0 space-y-5 disabled:opacity-70"
+        >
           <div>
-            <label htmlFor="assessment-scope" className="mb-2 block text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+            <label
+              htmlFor="assessment-scope"
+              className="mb-2 block text-[10px] font-bold tracking-widest text-slate-400 uppercase"
+            >
               Applies to
             </label>
             <select
@@ -56,7 +68,9 @@ export function AssessmentFrequencyPanel() {
             >
               {ASSESSMENT_SCOPES.map((s) => (
                 <option key={s} value={s}>
-                  {s === ORGANISATION_SCOPE ? "Entire organisation (all departments)" : s}
+                  {s === ORGANISATION_SCOPE
+                    ? "Entire organisation (all departments)"
+                    : s}
                 </option>
               ))}
             </select>
@@ -72,7 +86,9 @@ export function AssessmentFrequencyPanel() {
                   key={option.value}
                   className={cn(
                     "cursor-pointer rounded-xl border p-3 text-center transition has-focus-visible:ring-2 has-focus-visible:ring-navy",
-                    cycles === option.value ? "border-navy bg-slate-50" : "border-border-slate hover:bg-slate-50",
+                    cycles === option.value
+                      ? "border-navy bg-slate-50"
+                      : "border-border-slate hover:bg-slate-50",
                   )}
                 >
                   <input
@@ -82,7 +98,9 @@ export function AssessmentFrequencyPanel() {
                     checked={cycles === option.value}
                     onChange={() => setCycles(option.value)}
                   />
-                  <span className="block text-2xl font-bold text-navy">{option.value}</span>
+                  <span className="block text-2xl font-bold text-navy">
+                    {option.value}
+                  </span>
                   <span className="text-xs text-slate-500">{option.label}</span>
                 </label>
               ))}
@@ -95,19 +113,30 @@ export function AssessmentFrequencyPanel() {
             </legend>
             <div className="flex gap-6">
               {years.map((y) => (
-                <label key={y} className="flex items-center gap-2 text-sm text-navy">
-                  <input type="radio" name="assessment-year" checked={year === y} onChange={() => setYear(y)} />
+                <label
+                  key={y}
+                  className="flex items-center gap-2 text-sm text-navy"
+                >
+                  <input
+                    type="radio"
+                    name="assessment-year"
+                    checked={year === y}
+                    onChange={() => setYear(y)}
+                  />
                   {y}
                 </label>
               ))}
             </div>
           </fieldset>
-        </div>
+        </fieldset>
 
         <div>
-          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Assessment programme</p>
+          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+            Assessment programme
+          </p>
           <p className="mt-1 text-lg font-bold text-navy">
-            {cycles} assessment cycle{cycles > 1 ? "s" : ""} per year ({label}) · {scope}
+            {cycles} assessment cycle{cycles > 1 ? "s" : ""} per year ({label})
+            · {scope}
           </p>
           <table className="mt-3 w-full text-left text-sm">
             <thead className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
@@ -128,30 +157,41 @@ export function AssessmentFrequencyPanel() {
             </tbody>
           </table>
           <p className="mt-2 text-xs text-slate-500">
-            Exact start and end dates are confirmed when each cycle is activated.
+            Exact start and end dates are confirmed when each cycle is
+            activated.
           </p>
-          <Button
-            type="button"
-            className="mt-4 w-full"
-            onClick={() => {
-              setSaved((prev) => [{ scope, cycles, year }, ...prev.filter((p) => !(p.scope === scope && p.year === year))]);
-              toast.success("Assessment configuration saved", {
-                description: `${scope}: ${cycles} cycle${cycles > 1 ? "s" : ""} in ${year}`,
-              });
-            }}
-          >
-            Save Assessment Configuration
-          </Button>
+          {readOnly ? null : (
+            <Button
+              type="button"
+              className="mt-4 w-full"
+              onClick={() => {
+                setSaved((prev) => [
+                  { scope, cycles, year },
+                  ...prev.filter(
+                    (p) => !(p.scope === scope && p.year === year),
+                  ),
+                ]);
+                toast.success("Assessment configuration saved", {
+                  description: `${scope}: ${cycles} cycle${cycles > 1 ? "s" : ""} in ${year}`,
+                });
+              }}
+            >
+              Save Assessment Configuration
+            </Button>
+          )}
         </div>
       </div>
 
       {saved.length ? (
         <div className="mt-6 border-t border-border-slate pt-4">
-          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Saved programmes</p>
+          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+            Saved programmes
+          </p>
           <ul className="mt-2 space-y-1 text-sm text-navy">
             {saved.map((p) => (
               <li key={`${p.scope}-${p.year}`}>
-                <span className="font-bold">{p.scope}</span> · {p.year}: {p.cycles} cycle{p.cycles > 1 ? "s" : ""} (
+                <span className="font-bold">{p.scope}</span> · {p.year}:{" "}
+                {p.cycles} cycle{p.cycles > 1 ? "s" : ""} (
                 {CYCLE_OPTIONS.find((o) => o.value === p.cycles)!.label})
               </li>
             ))}

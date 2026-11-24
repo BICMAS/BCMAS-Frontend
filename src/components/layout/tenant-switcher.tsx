@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { allOrganisations } from "@/config/mock-users";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/session-store";
 
@@ -25,7 +26,8 @@ export function TenantSwitcher({
   compact = false,
 }: TenantSwitcherProps) {
   const organisation = useSessionStore((s) => s.organisation);
-  const organisations = useSessionStore((s) => s.organisations);
+  // Read at render so tenants provisioned on the platform appear without a reload.
+  const organisations = allOrganisations();
   const setOrganisationId = useSessionStore((s) => s.setOrganisationId);
 
   return (

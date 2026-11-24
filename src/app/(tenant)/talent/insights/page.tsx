@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { TalentInsightsView } from "@/features/talent";
+import { RecruitmentInsightsView } from "@/features/recruitment";
 
 export const metadata: Metadata = {
-  title: "Talent Insights",
+  title: "Recruitment Insights",
 };
 
 export default function Page() {
-  return <TalentInsightsView />;
+  return <RecruitmentInsightsView />;
 }

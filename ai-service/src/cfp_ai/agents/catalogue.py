@@ -1,4 +1,4 @@
-"""Declarations of the 18 public capabilities (AI_TECHNICAL_SPEC.md §3.2–§3.3).
+"""Declarations of the 20 public capabilities (AI_TECHNICAL_SPEC.md §3.2–§3.3).
 
 Declared now so that registration, authorisation, availability and telemetry are
 exercised by the foundation. ``implemented=False`` until each agent is built;
@@ -234,6 +234,31 @@ _DECLARED: tuple[CapabilitySpec, ...] = (
         llm_routes=("talent.insights_turn",),
         sync_deadline_s=60,
     ),
+    # External recruitment (BCMS Talent Assessment guide §12). Called directly by its API route,
+    # never orchestrated, so candidate CV text is not stored in execution history.
+    CapabilitySpec(
+        "talent.analyze_cv",
+        "talent_assessment",
+        "T7",
+        "sync",
+        "ai_talent_assessment",
+        (HR_TENANT,),
+        llm_routes=("talent.cv_analysis",),
+        sync_deadline_s=90,
+        orchestratable=False,
+    ),
+    # AI-avatar interview answers (guide §14): content-only rubric suggestions a person confirms.
+    CapabilitySpec(
+        "talent.score_interview",
+        "talent_assessment",
+        "T8",
+        "sync",
+        "ai_talent_assessment",
+        (HR_TENANT,),
+        llm_routes=("talent.interview_scoring",),
+        sync_deadline_s=90,
+        orchestratable=False,
+    ),
 )
 
 # Routing metadata used by the orchestrator: (summary, subject_mode, required_args).
@@ -280,6 +305,8 @@ _ROUTING: dict[str, tuple[str, SubjectMode, tuple[str, ...]]] = {
         ("evidence_id",),
     ),
     "talent.insights_turn": ("Answer questions about talent assessment trends.", "none", ()),
+    "talent.analyze_cv": ("Extract evidence from a candidate CV against a role profile.", "none", ()),
+    "talent.score_interview": ("Suggest rubric scores for structured interview answers.", "none", ()),
 }
 
 PUBLIC_CAPABILITIES: tuple[CapabilitySpec, ...] = tuple(

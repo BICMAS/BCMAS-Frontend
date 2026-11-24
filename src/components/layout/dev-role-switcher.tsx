@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { UsersIcon } from "lucide-react";
 
-import { mockUsers } from "@/config/mock-users";
+import { allUsers } from "@/config/mock-users";
 import { getNavigationConfig } from "@/config/navigation";
+import { tenantForOrganisation } from "@/features/platform/services/mock-platform";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,12 +52,15 @@ export function DevRoleSwitcher({
       <DropdownMenuContent align="start" className="min-w-64">
         <DropdownMenuLabel>Development personas</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {mockUsers.map((persona) => (
+        {allUsers().map((persona) => (
           <DropdownMenuItem
             key={persona.id}
             onClick={() => {
               setUserId(persona.id);
-              const nav = getNavigationConfig(persona.portal);
+              const nav = getNavigationConfig(
+                persona.portal,
+                tenantForOrganisation(persona.organisationId)?.entitlements,
+              );
               router.push(nav.defaultHref);
             }}
             className="flex flex-col items-start gap-0.5"

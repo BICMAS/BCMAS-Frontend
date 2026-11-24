@@ -176,23 +176,30 @@ export const globalSearchIndex: GlobalSearchResult[] = [
     category: "Development",
   },
   {
-    id: "talent-recruitment",
-    title: "Recruitment Assessments",
-    description: "Candidate assessments against approved role profiles",
-    href: "/talent/recruitment",
+    id: "talent-vacancies",
+    title: "Vacancy Management",
+    description: "Create, approve and publish vacancies with a public application link",
+    href: "/talent/vacancies",
+    category: "Development",
+  },
+  {
+    id: "talent-candidates",
+    title: "Candidate Management",
+    description: "External applicants, CV evidence and recruitment stages",
+    href: "/talent/candidates",
     category: "Development",
   },
   {
     id: "talent-library",
     title: "Assessment Library",
-    description: "Reusable talent assessment items",
+    description: "Your organisation's assessments and published BCMS templates",
     href: "/talent/library",
     category: "Development",
   },
   {
     id: "talent-insights",
-    title: "Talent Insights",
-    description: "Same-role comparison and readiness gaps",
+    title: "Recruitment Insights",
+    description: "Recruitment funnel, conversion, drop-off and time in stage",
     href: "/talent/insights",
     category: "Development",
   },
@@ -240,10 +247,19 @@ export const globalSearchIndex: GlobalSearchResult[] = [
   },
 ];
 
-export function searchGlobalIndex(query: string, limit = 8): GlobalSearchResult[] {
+/**
+ * Search the index. Pass canOpen to leave out pages the current person may not open
+ * (pages outside their role, or features switched off for their tenant).
+ */
+export function searchGlobalIndex(
+  query: string,
+  limit = 8,
+  canOpen: (href: string) => boolean = () => true,
+): GlobalSearchResult[] {
   const q = query.trim().toLowerCase();
-  if (!q) return globalSearchIndex.slice(0, limit);
-  return globalSearchIndex
+  const openable = globalSearchIndex.filter((item) => canOpen(item.href));
+  if (!q) return openable.slice(0, limit);
+  return openable
     .filter(
       (item) =>
         item.title.toLowerCase().includes(q) ||

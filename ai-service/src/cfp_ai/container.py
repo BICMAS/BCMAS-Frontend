@@ -215,8 +215,12 @@ def register_agents(capabilities: CapabilityRegistry, *, local: bool) -> None:
     from cfp_ai.agents.dev_plan.recommend_learning import RecommendLearningCapability
     from cfp_ai.agents.dev_plan.review_plan import SPEC as REVIEW_PLAN
     from cfp_ai.agents.dev_plan.review_plan import ReviewPlanCapability
+    from cfp_ai.agents.talent.cv_analysis import SPEC as CV_ANALYSIS
+    from cfp_ai.agents.talent.cv_analysis import AnalyzeCvCapability
     from cfp_ai.agents.talent.design import SPEC as DESIGN
     from cfp_ai.agents.talent.design import DesignAssessmentCapability
+    from cfp_ai.agents.talent.interview_scoring import SPEC as INTERVIEW
+    from cfp_ai.agents.talent.interview_scoring import ScoreInterviewCapability
     from cfp_ai.agents.talent.recommend_scores import SPEC as SCORES
     from cfp_ai.agents.talent.recommend_scores import RecommendScoresCapability
     from cfp_ai.agents.talent.report import SPEC as REPORT
@@ -234,6 +238,8 @@ def register_agents(capabilities: CapabilityRegistry, *, local: bool) -> None:
     capabilities.implement(SCORES, RecommendScoresCapability)
     capabilities.implement(DESIGN, DesignAssessmentCapability)
     capabilities.implement(REPORT, DraftReportCapability)
+    capabilities.implement(CV_ANALYSIS, AnalyzeCvCapability)
+    capabilities.implement(INTERVIEW, ScoreInterviewCapability)
     if local:
         from cfp_ai.agents.system.diagnostics import SPEC, DiagnosticsCapability
 

@@ -4,10 +4,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import {
+  allOrganisations,
   defaultMockUserId,
   getMockOrganisation,
   getMockUser,
-  mockOrganisations,
 } from "@/config/mock-users";
 import type { MockOrganisation, MockUser } from "@/types/user";
 
@@ -29,7 +29,7 @@ function resolveSession(userId: string, organisationId?: string) {
     organisationId: orgId,
     user,
     organisation: getMockOrganisation(orgId),
-    organisations: mockOrganisations,
+    organisations: allOrganisations(),
   };
 }
 
@@ -48,6 +48,7 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({
           organisationId,
           organisation: getMockOrganisation(organisationId),
+          organisations: allOrganisations(),
           user: state.user,
         })),
     }),

@@ -1,3 +1,4 @@
+import { provisionedOrganisations, provisionedUsers } from "@/config/provisioned-tenants";
 import type { MockOrganisation, MockUser } from "@/types/user";
 
 export const mockOrganisations: MockOrganisation[] = [
@@ -45,9 +46,9 @@ export const mockUsers: MockUser[] = [
     id: "user-priya",
     name: "Priya Nair",
     email: "priya.nair@gec.example",
-    roleLabel: "L&D Administrator",
+    roleLabel: "HRBP",
     portal: "hr_ld_admin",
-    jobTitle: "Head of L&D",
+    jobTitle: "HR Business Partner",
     avatarUrl:
       "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg",
     organisationId: "org-gec",
@@ -81,12 +82,22 @@ export const mockUsers: MockUser[] = [
 
 export const defaultMockUserId = "user-sarah";
 
+/** Seeded organisations plus any created on the New Tenant Provisioning page. */
+export function allOrganisations(): MockOrganisation[] {
+  return [...mockOrganisations, ...provisionedOrganisations()];
+}
+
+/** Seeded personas plus the first admin of each provisioned tenant. */
+export function allUsers(): MockUser[] {
+  return [...mockUsers, ...provisionedUsers()];
+}
+
 export function getMockUser(id: string): MockUser {
-  return mockUsers.find((user) => user.id === id) ?? mockUsers[1]!;
+  return allUsers().find((user) => user.id === id) ?? mockUsers[1]!;
 }
 
 export function getMockOrganisation(id: string): MockOrganisation {
   return (
-    mockOrganisations.find((org) => org.id === id) ?? mockOrganisations[0]!
+    allOrganisations().find((org) => org.id === id) ?? mockOrganisations[0]!
   );
 }

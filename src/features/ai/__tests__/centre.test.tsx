@@ -14,7 +14,7 @@ describe("AI Capability Centre", () => {
     expect(screen.getByText("AI Talent Assessment Agent")).toBeTruthy();
     // An employee cannot use the HR-only talent capabilities.
     const talent = screen.getByText("AI Talent Assessment Agent").closest("article")!;
-    expect(within(talent).getByText(/0 of 3 capabilities available to you/)).toBeTruthy();
+    expect(within(talent).getByText(/0 of 5 capabilities available to you/)).toBeTruthy(); // incl. CV analysis (T7) + interview scoring (T8)
     expect(await screen.findByText("Practise: Data Retention Briefing with the CPO")).toBeTruthy();
     expect(await screen.findByText("Gaps to close")).toBeTruthy();
     expect(screen.getAllByText("API Governance").length).toBeGreaterThan(0);

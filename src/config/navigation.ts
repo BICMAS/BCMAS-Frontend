@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 import type { UserPortal } from "@/types";
-import type { NavigationConfig } from "@/types/navigation";
+import type { MobileTab, NavigationConfig, NavItem } from "@/types/navigation";
 
 /**
  * Role-scoped navigation from HTML sidebars / ROUTE_MAP.
@@ -267,12 +267,15 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
     ],
   },
 
+  // HRBP view, per the "HR BP View" review: Roles Directory first, skills and employee
+  // alignment work, view-only assessment cycles, L&D and Training Plan. No Organisation
+  // Overview, Framework Settings, Admin Hub (except About BCMS) or AI section.
   hr_ld_admin: {
     portal: "hr_ld_admin",
     brandLabel: "BICMAS",
-    brandSubtitle: "Growth Hub",
-    workspaceLabel: "Development",
-    defaultHref: "/ld",
+    brandSubtitle: "BCMS",
+    workspaceLabel: "HR Business Partner",
+    defaultHref: "/roles",
     sections: [
       {
         id: "core-lifecycle",
@@ -284,6 +287,29 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             href: "/roles",
             icon: NetworkIcon,
             matchPrefix: "/roles",
+            children: [
+              {
+                id: "roles-list",
+                label: "Roles Directory",
+                href: "/roles",
+                icon: NetworkIcon,
+              },
+            ],
+          },
+          {
+            id: "skills",
+            label: "Skills Profiles",
+            href: "/skills",
+            icon: UserCogIcon,
+            matchPrefix: "/skills",
+            children: [
+              {
+                id: "skills-library",
+                label: "Skills Library",
+                href: "/skills",
+                icon: LibraryIcon,
+              },
+            ],
           },
           {
             id: "employees",
@@ -291,13 +317,47 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             href: "/employees",
             icon: UsersIcon,
             matchPrefix: "/employees",
+            children: [
+              {
+                id: "employee-directory",
+                label: "Employee Directory",
+                href: "/employees",
+                icon: UsersIcon,
+              },
+              {
+                id: "bulk-mapping",
+                label: "Bulk Mapping",
+                href: "/employees/mapping/bulk",
+                icon: ListChecksIcon,
+              },
+              {
+                id: "mapping",
+                label: "Mapping Workspace",
+                href: "/employees/mapping",
+                icon: WaypointsIcon,
+              },
+            ],
           },
           {
-            id: "capability-build",
-            label: "Capability Build",
+            id: "assessments",
+            label: "Capability Assessment",
             href: "/assessments/cycles",
-            icon: ClipboardCheckIcon,
+            icon: ChartPieIcon,
             matchPrefix: "/assessments",
+          },
+          {
+            id: "learning",
+            label: "Learning & Development",
+            href: "/learning",
+            icon: GraduationCapIcon,
+            matchPrefix: "/learning",
+          },
+          {
+            id: "training-plan",
+            label: "Training Plan",
+            href: "/training-plan",
+            icon: ClipboardListIcon,
+            matchPrefix: "/training-plan",
           },
           {
             id: "talent-assessment",
@@ -313,22 +373,29 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
                 icon: LayoutGridIcon,
               },
               {
-                id: "talent-recruitment",
-                label: "Recruitment",
-                href: "/talent/recruitment",
+                id: "talent-vacancies",
+                label: "Vacancies",
+                href: "/talent/vacancies",
                 icon: ClipboardCheckIcon,
-                matchPrefix: "/talent/recruitment",
+                matchPrefix: "/talent/vacancies",
+              },
+              {
+                id: "talent-candidates",
+                label: "Candidates",
+                href: "/talent/candidates",
+                icon: UsersIcon,
+                matchPrefix: "/talent/candidates",
               },
               {
                 id: "talent-library",
-                label: "Library",
+                label: "Assessment Library",
                 href: "/talent/library",
                 icon: LibraryIcon,
                 matchPrefix: "/talent/library",
               },
               {
                 id: "talent-insights",
-                label: "Insights",
+                label: "Recruitment Insights",
                 href: "/talent/insights",
                 icon: LineChartIcon,
                 matchPrefix: "/talent/insights",
@@ -338,87 +405,33 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
         ],
       },
       {
-        id: "development",
-        title: "Development",
+        id: "help",
+        title: "Help",
         items: [
           {
-            id: "ld-dashboard",
-            label: "Growth Dashboard",
-            href: "/ld",
-            icon: LayoutDashboardIcon,
-            matchPrefix: "/ld",
-          },
-          {
-            id: "catalogue",
-            label: "Capability Library",
-            href: "/learning",
-            icon: LibraryIcon,
-            matchPrefix: "/learning",
-          },
-          {
-            id: "verification",
-            label: "Verification",
-            href: "/verification",
-            icon: ShieldIcon,
-            matchPrefix: "/verification",
-            children: [
-              {
-                id: "verification-overview",
-                label: "Overview",
-                href: "/verification",
-                icon: LayoutGridIcon,
-              },
-              {
-                id: "verification-results",
-                label: "Results & Audit",
-                href: "/verification/results",
-                icon: ScrollTextIcon,
-              },
-            ],
-          },
-          {
-            id: "learning-insights",
-            label: "Learning & ROI",
-            href: "/insights/learning",
-            icon: LineChartIcon,
-            matchPrefix: "/insights",
-          },
-        ],
-      },
-      {
-        id: "ai",
-        title: "AI",
-        items: [
-          {
-            id: "ai-centre",
-            label: "AI Capability Centre",
-            href: "/ai",
-            icon: SparklesIcon,
-          },
-          {
-            id: "ai-plans",
-            label: "AI Training Plans",
-            href: "/ai/plans",
-            icon: GraduationCapIcon,
-            matchPrefix: "/ai/plans",
-          },
-          {
-            id: "ai-assessments",
-            label: "AI Talent Assessment",
-            href: "/ai/assessments",
-            icon: ClipboardCheckIcon,
-            matchPrefix: "/ai/assessments",
+            id: "about",
+            label: "About BCMS",
+            href: "/about",
+            icon: InfoIcon,
+            matchPrefix: "/about",
           },
         ],
       },
     ],
     mobileTabs: [
-      { id: "home", label: "Home", href: "/ld", icon: HomeIcon },
+      { id: "home", label: "Roles", href: "/roles", icon: NetworkIcon, matchPrefix: "/roles" },
+      {
+        id: "team",
+        label: "Team",
+        href: "/employees",
+        icon: UsersIcon,
+        matchPrefix: "/employees",
+      },
       {
         id: "assess",
         label: "Assess",
         href: "/assessments/cycles",
-        icon: ClipboardCheckIcon,
+        icon: ChartPieIcon,
         matchPrefix: "/assessments",
       },
       {
@@ -427,13 +440,6 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
         href: "/learning",
         icon: GraduationCapIcon,
         matchPrefix: "/learning",
-      },
-      {
-        id: "verify",
-        label: "Verify",
-        href: "/verification",
-        icon: ShieldIcon,
-        matchPrefix: "/verification",
       },
     ],
   },
@@ -469,6 +475,20 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             href: "/verification/team",
             icon: ClipboardCheckIcon,
             matchPrefix: "/verification",
+          },
+          {
+            id: "vacancy-approvals",
+            label: "Vacancy Approvals",
+            href: "/manager/vacancies",
+            icon: ListChecksIcon,
+            matchPrefix: "/manager/vacancies",
+          },
+          {
+            id: "hiring-review",
+            label: "Hiring Review",
+            href: "/manager/recruitment",
+            icon: UsersIcon,
+            matchPrefix: "/manager/recruitment",
           },
           {
             id: "gaps",
@@ -669,6 +689,13 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             icon: Building2Icon,
             exact: true,
           },
+          {
+            id: "assessment-library",
+            label: "Assessment Library",
+            href: "/platform/assessment-library",
+            icon: LibraryIcon,
+            matchPrefix: "/platform/assessment-library",
+          },
         ],
       },
       {
@@ -739,8 +766,82 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
   },
 };
 
-export function getNavigationConfig(portal: UserPortal): NavigationConfig {
-  return navigationByPortal[portal];
+/**
+ * Menu paths owned by each tenant feature (the Platform Super Admin turns features on per tenant).
+ * Paths not listed here are core and always shown. Multi-BU and SAML have no menus of their own.
+ */
+export const FEATURE_ROUTES: Record<string, string[]> = {
+  "AI Coaching": ["/ai/coaching"],
+  "L&D Library": ["/learning", "/training-plan", "/ld"],
+  Assessments: ["/assessments", "/verification"],
+  "Talent Assessment": ["/talent", "/manager/vacancies", "/manager/recruitment"],
+  Reports: ["/insights"],
+};
+
+/**
+ * Pages a portal may not open even by URL, because they are not part of that role's work.
+ * The HRBP list follows the "HR BP View" review: no Organisation pages, Framework Settings,
+ * Admin Hub (except About BCMS) or AI section.
+ */
+export const PORTAL_BLOCKED_ROUTES: Partial<Record<UserPortal, string[]>> = {
+  hr_ld_admin: ["/org", "/skills/framework", "/settings", "/insights", "/ai", "/ld", "/growth", "/verification"],
+};
+
+/** True when the portal may not open this page. */
+export function isPathBlockedForPortal(href: string, portal: UserPortal) {
+  return (PORTAL_BLOCKED_ROUTES[portal] ?? []).some((prefix) => startsWithPath(href, prefix));
+}
+
+function startsWithPath(href: string, prefix: string) {
+  return href === prefix || href.startsWith(`${prefix}/`);
+}
+
+/** The feature that owns a path, or null for core paths. */
+export function featureForPath(href: string): string | null {
+  for (const [feature, prefixes] of Object.entries(FEATURE_ROUTES)) {
+    if (prefixes.some((prefix) => startsWithPath(href, prefix))) return feature;
+  }
+  return null;
+}
+
+/** False when the path belongs to a feature the tenant does not have. Used for menus and page access. */
+export function isPathAllowed(href: string, entitlements: readonly string[]) {
+  const feature = featureForPath(href);
+  return feature === null || entitlements.includes(feature);
+}
+
+const allowed = isPathAllowed;
+
+function filterItems(items: NavItem[], entitlements: readonly string[]): NavItem[] {
+  return items.flatMap((item) => {
+    const children = item.children ? filterItems(item.children, entitlements) : undefined;
+    if (!allowed(item.href, entitlements)) {
+      // A group whose own link is switched off stays only if some of its children are on.
+      if (!children?.length) return [];
+      return [{ ...item, href: children[0]!.href, children }];
+    }
+    return [{ ...item, ...(item.children ? { children } : {}) }];
+  });
+}
+
+/**
+ * Navigation for a portal. Pass the tenant's enabled features to hide the menus of features it
+ * does not have; omit them (or pass null) to show everything.
+ */
+export function getNavigationConfig(portal: UserPortal, entitlements?: readonly string[] | null): NavigationConfig {
+  const config = navigationByPortal[portal];
+  if (!entitlements || portal === "platform_super_admin") return config;
+  const sections = config.sections
+    .map((section) => ({ ...section, items: filterItems(section.items, entitlements) }))
+    .filter((section) => section.items.length > 0);
+  const mobileTabs: MobileTab[] = config.mobileTabs.filter((tab) => allowed(tab.href, entitlements));
+  const firstHref = sections[0]?.items[0]?.href ?? config.defaultHref;
+  return {
+    ...config,
+    sections,
+    mobileTabs,
+    defaultHref: allowed(config.defaultHref, entitlements) ? config.defaultHref : firstHref,
+  };
 }
 
 /** Platform shell uses Cpu icon in HTML; expose for header brand */

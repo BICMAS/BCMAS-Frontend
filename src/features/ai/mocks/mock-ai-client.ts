@@ -10,7 +10,14 @@ import type {
   AgentSummary,
   AiIdentity,
   AiProvenance,
+  AssessmentDesign,
   AssessmentDesignEnvelope,
+  AssessmentQuestion,
+  CompetencyRubric,
+  CvAnalysis,
+  CvSkillEvidence,
+  InterviewQuestionScore,
+  InterviewScoring,
   AssessmentEvaluation,
   AssessmentReportEnvelope,
   CapabilityId,
@@ -72,6 +79,37 @@ function provenance(capability: CapabilityId, model = "mock-model"): AiProvenanc
     unavailable_context: [],
   };
 }
+
+/** The framework role profiles the AI service mock backend knows (mirrors ai-service mock data). */
+const FRAMEWORK_ROLES: Record<
+  string,
+  {
+    title: string;
+    version: string;
+    requirements: Array<{ skill_id: string; skill_name: string; required_level: number; category: "technical" | "behavioural" }>;
+  }
+> = {
+  "role-ssa": {
+    title: "Senior Solutions Architect",
+    version: "3",
+    requirements: [
+      { skill_id: "skl-cloud", skill_name: "Cloud Infrastructure Design", required_level: 4, category: "technical" },
+      { skill_id: "skl-api-gov", skill_name: "API Governance", required_level: 4, category: "technical" },
+      { skill_id: "skl-microservices", skill_name: "Microservices Design", required_level: 4, category: "technical" },
+      { skill_id: "skl-influence", skill_name: "Strategic Influence", required_level: 5, category: "behavioural" },
+    ],
+  },
+  "role-lde": {
+    title: "Lead Data Engineer",
+    version: "1",
+    requirements: [
+      { skill_id: "skl-cloud", skill_name: "Cloud Infrastructure Design", required_level: 3, category: "technical" },
+      { skill_id: "skl-microservices", skill_name: "Microservices Design", required_level: 3, category: "technical" },
+      { skill_id: "skl-api-gov", skill_name: "API Governance", required_level: 2, category: "technical" },
+    ],
+  },
+};
+const LEVEL_LABELS = ["Foundation", "Developing", "Proficient", "Advanced", "Expert"];
 
 const MODES: ModeInfo[] = [
   ["career", "Career coaching", "Explore direction and next steps.", "GROW"],
@@ -258,6 +296,8 @@ export class MockAiClient implements AiClient {
       ["talent.recommend_scores", "talent_assessment", hr],
       ["talent.draft_items", "talent_assessment", hr],
       ["talent.draft_report", "talent_assessment", hr || this.isManagerOrHr()],
+      ["talent.analyze_cv", "talent_assessment", hr],
+      ["talent.score_interview", "talent_assessment", hr],
     ];
     return rows.map(([capability, agent, ok]) => ({
       capability,
@@ -782,7 +822,236 @@ export class MockAiClient implements AiClient {
 
   // ── talent assessment ──────────────────────────────────────────────────
 
-  designAssessment: AiClient["designAssessment"] = async () => this.fail("invalid_request", "Assessment design is not available in mock mode.") as never as AssessmentDesignEnvelope;
+  /** T8 talent.score_interview: same rules as the AI service fake (content only, verbatim evidence). */
+  scoreInterview: AiClient["scoreInterview"] = async (request) => {
+    if (!this.persona().roles.includes("hr_ld_admin")) this.fail("forbidden", "Interview scoring is available to HR only.");
+    const stems = (text: string) =>
+      new Set((text.toLowerCase().match(/[a-z]+/g) ?? []).filter((w) => w.length >= 4).map((w) => w.slice(0, 5)));
+    const answers = new Map(request.answers.map((a) => [a.question_id, a.text]));
+    const scores: InterviewQuestionScore[] = request.questions.map((q) => {
+      const answer = answers.get(q.question_id) ?? "";
+      const levels = [...q.rubric].sort((a, b) => a.score - b.score);
+      const max = levels[levels.length - 1]!.score;
+      const words = answer.split(/\s+/).filter(Boolean).length;
+      if (!answer.trim()) {
+        return { question_id: q.question_id, competency: q.competency, score: 0, max_score: max, confidence: "high", evidence: [], rationale: "No answer was given." };
+      }
+      const answerStems = words >= 25 ? new Set([...stems(answer), ...stems(q.question)]) : stems(answer);
+      let chosen = levels[0]!;
+      for (const level of levels) {
+        if ([...stems(level.descriptor)].filter((w) => answerStems.has(w)).length >= 2) chosen = level;
+      }
+      if (words < 8) chosen = levels[0]!;
+      const sentences = answer.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+      const quote = sentences.reduce((a, b) => (b.length > a.length ? b : a), sentences[0] ?? answer.trim());
+      return {
+        question_id: q.question_id,
+        competency: q.competency,
+        score: chosen.score,
+        max_score: max,
+        confidence: words >= 25 ? "medium" : "low",
+        evidence: quote.length >= 4 ? [quote] : [],
+        rationale: `The answer matches the level ${chosen.score} description for ${q.competency}.`,
+      };
+    });
+    const result: InterviewScoring = {
+      role_title: request.role_title,
+      scores,
+      summary: "Scores are based on the content of each answer against its approved rubric.",
+      validation: { passed: true, repaired: false, issues: [] },
+      provenance: provenance("talent.score_interview"),
+      disclaimer: "Suggested scores for a person to confirm. Only the content of answers was considered; appearance, accent, fluency and expression are never scored.",
+    };
+    return this.wait(result);
+  };
+
+  /** T7 talent.analyze_cv: same rules as the AI service fake (verbatim passages, never a decision). */
+  analyzeCv: AiClient["analyzeCv"] = async (request) => {
+    if (!this.persona().roles.includes("hr_ld_admin")) this.fail("forbidden", "CV analysis is available to HR only.");
+    if (request.cv_text.trim().length < 50) this.fail("invalid_request", "The CV text is too short to analyse.");
+    const stems = (text: string) =>
+      new Set((text.toLowerCase().match(/[a-z]+/g) ?? []).filter((w) => w.length >= 4).map((w) => w.slice(0, 5)));
+    const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
+    const lines = request.cv_text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const sentences = lines.flatMap((l) =>
+      l
+        .split(/(?<=[.!?])\s+/)
+        .map((x) => x.trim())
+        .filter(Boolean),
+    );
+    const skills: CvSkillEvidence[] = request.requirements.map((req) => {
+      const want = stems(req.skill_name);
+      let best: { ratio: number; sentence: string } | null = null;
+      for (const sentence of sentences) {
+        const have = stems(sentence);
+        const shared = [...want].filter((w) => have.has(w)).length;
+        const ratio = want.size ? shared / want.size : 0;
+        if (shared && (!best || ratio > best.ratio)) best = { ratio, sentence };
+      }
+      const base = { skill_name: req.skill_name, category: req.category, target_level: req.target_level };
+      if (best && best.ratio >= 0.99 && words(best.sentence) >= 5) {
+        return {
+          ...base,
+          status: "found",
+          confidence: words(best.sentence) >= 8 ? "high" : "medium",
+          passages: [best.sentence],
+          note: `The CV describes work involving ${req.skill_name.toLowerCase()}.`,
+        };
+      }
+      if (best) {
+        return {
+          ...base,
+          status: "unclear",
+          confidence: "low",
+          passages: best.sentence.length >= 8 ? [best.sentence] : [],
+          note: "Only a partial or indirect mention; ask the candidate for an example.",
+        };
+      }
+      return {
+        ...base,
+        status: "not_found",
+        confidence: "medium",
+        passages: [],
+        note: "No relevant passage in the CV. This is not proof the skill is missing.",
+      };
+    });
+    const found = skills.filter((x) => x.status === "found").length;
+    const unclear = skills.filter((x) => x.status === "unclear").length;
+    const qualification =
+      /\b(BSc|B\.Sc|MSc|M\.Sc|MBA|BA|MA|PhD|HND|OND|Degree|Diploma|Certified|Certificate|Certification|ACCA|ICAN|CIPM)\b/;
+    const result: CvAnalysis = {
+      role_title: request.role_title,
+      skills,
+      experience: lines.filter((l) => /\b(19|20)\d{2}\b/.test(l)).slice(0, 5),
+      qualifications: lines.filter((l) => qualification.test(l)).slice(0, 5),
+      summary: `The CV shows clear evidence for ${found} of ${skills.length} required skills. Other skills are unclear or not mentioned and should be explored with the candidate.`,
+      coverage_pct: Math.round((100 * found) / skills.length),
+      evidence_found: found,
+      unclear,
+      not_found: skills.length - found - unclear,
+      validation: { passed: true, repaired: false, issues: [] },
+      provenance: provenance("talent.analyze_cv"),
+      disclaimer:
+        "CV analysis is a screening signal, not proof of competence. A skill marked Not found or Unclear may still be held: no candidate is rejected on this basis alone, and people review every result.",
+    };
+    return this.wait(result);
+  };
+
+  /** T1 talent.draft_items: a draft design built from the framework role profile (HR only). */
+  designAssessment: AiClient["designAssessment"] = async (request) => {
+    if (!this.persona().roles.includes("hr_ld_admin")) this.fail("forbidden", "Assessment design is available to HR only.");
+    const role = FRAMEWORK_ROLES[request.role_id ?? ""];
+    if (!role) this.fail("not_found", "There is no framework role profile for this role yet.");
+    const wanted = request.skill_ids?.length
+      ? role.requirements.filter((r) => request.skill_ids!.includes(r.skill_id))
+      : role.requirements;
+    if (wanted.length === 0) this.fail("invalid_request", "The selected skills are not requirements of this role.");
+    const perSkill = Math.min(3, Math.max(1, request.questions_per_competency ?? 2));
+    const competencies: CompetencyRubric[] = wanted.map((r) => {
+      const level = request.target_level ?? r.required_level;
+      return {
+        skill_id: r.skill_id,
+        skill_name: r.skill_name,
+        category: r.category,
+        target_level: level,
+        bands: [1, 2, 3, 4, 5].map((l) => ({
+          level: l,
+          label: LEVEL_LABELS[l - 1]!,
+          descriptor: LEVEL_LABELS[l - 1] + " use of " + r.skill_name + ".",
+          indicator_ids: ["ind-" + r.skill_id + "-" + l + "-1"],
+        })),
+        criteria: [
+          { criterion_id: "ind-" + r.skill_id + "-" + level + "-1", skill_id: r.skill_id, level, text: "Applies " + r.skill_name + " independently in complex situations." },
+          { criterion_id: "ind-" + r.skill_id + "-" + level + "-2", skill_id: r.skill_id, level, text: "Explains " + r.skill_name + " trade-offs to stakeholders." },
+        ],
+      };
+    });
+    const questions: AssessmentQuestion[] = competencies.flatMap((c) => {
+      const [c1, c2] = c.criteria;
+      const sjt: AssessmentQuestion = {
+        question_key: c.skill_id + "-sjt",
+        type: "situational_judgement",
+        respondent: "subject",
+        skill_id: c.skill_id,
+        target_level: c.target_level,
+        prompt: "A delivery deadline is at risk because of a " + c.skill_name.toLowerCase() + " decision your team disagrees on. What do you do first?",
+        options: [
+          { option_key: "a", text: "Escalate to your manager and wait for a decision", score: 1, indicator_ids: [], rationale: "Defers ownership." },
+          { option_key: "b", text: "Lay out the options and trade-offs, agree criteria with the team, then decide", score: 4, indicator_ids: [c1!.criterion_id, c2!.criterion_id], rationale: "Owns the decision with transparent trade-offs." },
+          { option_key: "c", text: "Pick the option you prefer and move on", score: 2, indicator_ids: [], rationale: "Decides without agreement." },
+          { option_key: "d", text: "Delay the deadline", score: 1, indicator_ids: [], rationale: "Avoids the decision." },
+        ],
+        expected_indicator_ids: [c1!.criterion_id],
+        look_fors: [],
+        model_answer_outline: null,
+        feedback: { strong: "Weighs trade-offs openly and owns the decision.", developing: "Practise setting decision criteria with the team." },
+        evidence_required: "Selected option.",
+        estimated_minutes: 3,
+      };
+      const scenario: AssessmentQuestion = {
+        question_key: c.skill_id + "-scenario",
+        type: "scenario",
+        respondent: "subject",
+        skill_id: c.skill_id,
+        target_level: c.target_level,
+        prompt: "Describe how you would apply " + c.skill_name + " to a new customer-facing platform that must scale to three times today's load. Explain the trade-offs you would present to stakeholders.",
+        options: null,
+        expected_indicator_ids: [c1!.criterion_id, c2!.criterion_id],
+        look_fors: ["States constraints and success measures", "Compares at least two options", "Explains trade-offs in business terms"],
+        model_answer_outline: "Constraints, options, recommendation, risks and how success is measured.",
+        feedback: { strong: "Clear options, explicit trade-offs and measurable outcomes.", developing: "Name the trade-offs and how you would measure success." },
+        evidence_required: "Written answer.",
+        estimated_minutes: 6,
+      };
+      const behavioural: AssessmentQuestion = {
+        ...scenario,
+        question_key: c.skill_id + "-behavioural",
+        type: "behavioural",
+        prompt: "Tell us about a time you used " + c.skill_name + " to resolve a difficult problem. What did you do and what was the outcome?",
+      };
+      return [sjt, scenario, behavioural].slice(0, perSkill);
+    });
+    const design: AssessmentDesign = {
+      design_type: "assessment_design",
+      method: request.method ?? "competency_based",
+      title: role.title + " assessment",
+      objectives: ["Establish evidence of the " + role.title + " role requirements."],
+      role_id: request.role_id ?? null,
+      role_profile_version: role.version,
+      competencies,
+      questions,
+      rating_scale: competencies[0]!.bands,
+      scoring_method: "Highest level whose criteria are at least 75% evidenced.",
+      evidence_policy: "Scores rely on response evidence only.",
+      total_minutes: questions.reduce((sum, q) => sum + q.estimated_minutes, 0),
+      validation: { passed: true, repaired: false, issues: [] },
+    };
+    const envelope: AssessmentDesignEnvelope = {
+      draft: {
+        draft_id: nextId("drf") as AssessmentDesignEnvelope["draft"]["draft_id"],
+        kind: "assessment_items",
+        status: "open",
+        subject_employee_id: null,
+        payload: design,
+        provenance: provenance("talent.draft_items"),
+        approval_policy: { mode: "per_item_review", approver_roles: ["hr_ld_admin"], commit_target: "backend", commit_endpoint_id: "BE-065" },
+        disclaimer: "AI-drafted assessment design. It is used only after an assessor has reviewed and approved it.",
+        created_by: "user-mock",
+        created_at: now(),
+        expires_at: inDays(14),
+        resolution: null,
+      },
+      version: 1,
+      review_history: [{ at: now(), action: "created", actor_hash: "mock", version: 1, note: null }],
+      commit_plan: [],
+      can_resolve: true,
+      can_propose_edits: true,
+    };
+    return this.wait(envelope);
+  };
 
   private evaluation(assessmentId: string): AssessmentEvaluation {
     const rows: Array<[string, string, string, number, number | null, "low" | "medium" | "high", string]> = [

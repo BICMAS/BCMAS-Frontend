@@ -443,15 +443,18 @@ export function RolesDirectoryView({
         </DialogContent>
       </Dialog>
 
-      <p className="text-xs text-slate-400">
-        Need org structure first?{" "}
-        <Link
-          href="/org/departments"
-          className={cn(buttonVariants({ variant: "link" }), "h-auto p-0")}
-        >
-          Setting up your organisation? Start by defining the roles.
-        </Link>
-      </p>
+      {/* Organisation pages are for the Organisation Admin, not the HRBP. */}
+      {user?.portal === "hr_ld_admin" ? null : (
+        <p className="text-xs text-slate-400">
+          Need org structure first?{" "}
+          <Link
+            href="/org/departments"
+            className={cn(buttonVariants({ variant: "link" }), "h-auto p-0")}
+          >
+            Setting up your organisation? Start by defining the roles.
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

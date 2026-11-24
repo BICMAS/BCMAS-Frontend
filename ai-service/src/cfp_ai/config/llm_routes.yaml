@@ -42,6 +42,8 @@ routes:
   talent.report:               { effort: high,   max_tokens: 12000, timeout_s: 120, stream: true }
   talent.evidence:             { effort: medium, max_tokens: 6000,  timeout_s: 10 }
   talent.insights_turn:        { effort: medium, max_tokens: 6000,  timeout_s: 60,  stream: true }
+  talent.cv_analysis:          { effort: medium, max_tokens: 6000,  timeout_s: 60 }
+  talent.interview_scoring:    { effort: high,   max_tokens: 8000,  timeout_s: 90 }
 
 # Used for the cost estimate metric only (USD per million tokens). Add models as they are adopted.
 prices_per_mtok:

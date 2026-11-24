@@ -9,7 +9,7 @@ export type AppRole =
   | "Platform Super Admin"
   | "Organisation Admin"
   | "Department Admin"
-  | "L&D Administrator"
+  | "HRBP"
   | "Line Manager"
   | "Employee";
 

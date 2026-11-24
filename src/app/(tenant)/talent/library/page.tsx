@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { TalentLibraryView } from "@/features/talent";
+import { OrgLibraryView } from "@/features/assessment-library";
 
 export const metadata: Metadata = {
-  title: "Assessment Library",
+  title: "Organisation Assessment Library",
 };
 
 export default function Page() {
-  return <TalentLibraryView />;
+  return <OrgLibraryView />;
 }

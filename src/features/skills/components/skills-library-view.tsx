@@ -17,6 +17,7 @@ import type { OrgMetric } from "@/features/organisation/types";
 import { duplicateSkill } from "@/features/skills/services/mock-skills";
 import type { SkillRecord } from "@/features/skills/types";
 import { useListQuery } from "@/hooks/use-list-query";
+import { useHydratedUser } from "@/features/talent/use-hydrated-user";
 import { SKILL_CATEGORY_LABELS } from "@/lib/mock/types";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ const categoryVariant = {
 
 export function SkillsLibraryView({ initialSkills }: SkillsLibraryViewProps) {
   const router = useRouter();
+  const portal = useHydratedUser()?.portal;
   const [skills, setSkills] = useState(initialSkills);
   const [category, setCategory] = useState<"all" | SkillRecord["category"]>(
     "all",
@@ -215,12 +217,15 @@ export function SkillsLibraryView({ initialSkills }: SkillsLibraryViewProps) {
         }
         actions={
           <>
-            <Link
-              href="/skills/framework"
-              className={cn(buttonVariants({ variant: "secondary" }))}
-            >
-              Framework settings
-            </Link>
+            {/* Framework Settings is switched off for HRBPs. */}
+            {portal === "hr_ld_admin" ? null : (
+              <Link
+                href="/skills/framework"
+                className={cn(buttonVariants({ variant: "secondary" }))}
+              >
+                Framework settings
+              </Link>
+            )}
             <Button
               type="button"
               onClick={() =>

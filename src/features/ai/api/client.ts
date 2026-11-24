@@ -3,6 +3,10 @@ import type {
   AiIdentity,
   AssessmentDesignEnvelope,
   AssessmentDesignRequest,
+  CvAnalysis,
+  CvAnalysisRequest,
+  InterviewScoring,
+  InterviewScoringRequest,
   AssessmentReportEnvelope,
   CapabilitiesResponse,
   CoachingConversation,
@@ -112,6 +116,10 @@ export interface AiClient {
 
   // ── talent assessment ──
   designAssessment(request: AssessmentDesignRequest): Promise<AssessmentDesignEnvelope>;
+  /** T7: CV evidence against a role profile (HR only). */
+  analyzeCv(request: CvAnalysisRequest): Promise<CvAnalysis>;
+  /** T8: rubric score suggestions for interview answers (HR only; a person confirms). */
+  scoreInterview(request: InterviewScoringRequest): Promise<InterviewScoring>;
   scoreAssessment(assessmentId: string, request: ScoringRequest): Promise<ScoringView>;
   getScoringSet(scoringSetId: string): Promise<ScoringView>;
   reviewScoringSet(scoringSetId: string, decision: OrchestratorApprovalDecision): Promise<ScoringView>;

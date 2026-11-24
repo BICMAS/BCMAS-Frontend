@@ -18,13 +18,21 @@ import { cn } from "@/lib/utils";
 type GlobalSearchProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Leaves out pages the current person may not open. */
+  canOpen?: (href: string) => boolean;
 };
 
-function GlobalSearchBody({ onNavigate }: { onNavigate: (href: string) => void }) {
+function GlobalSearchBody({
+  onNavigate,
+  canOpen,
+}: {
+  onNavigate: (href: string) => void;
+  canOpen?: (href: string) => boolean;
+}) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const results = useMemo(() => searchGlobalIndex(query), [query]);
+  const results = useMemo(() => searchGlobalIndex(query, 8, canOpen), [query, canOpen]);
   const safeActiveIndex =
     results.length === 0 ? 0 : Math.min(activeIndex, results.length - 1);
 
@@ -95,7 +103,7 @@ function GlobalSearchBody({ onNavigate }: { onNavigate: (href: string) => void }
   );
 }
 
-export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
+export function GlobalSearch({ open, onOpenChange, canOpen }: GlobalSearchProps) {
   const router = useRouter();
 
   const go = (href: string) => {
@@ -113,7 +121,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           </DialogDescription>
         </DialogHeader>
         {/* Remount on open so query/activeIndex reset without effect setState */}
-        {open ? <GlobalSearchBody key="open" onNavigate={go} /> : null}
+        {open ? <GlobalSearchBody key="open" onNavigate={go} canOpen={canOpen} /> : null}
       </DialogContent>
     </Dialog>
   );

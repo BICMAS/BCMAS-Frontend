@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   ArrowRightIcon,
   LayersIcon,
@@ -16,12 +16,30 @@ import { Button } from "@/components/ui/button";
 import {
   mockSelectWorkspace,
   mockWorkspaces,
+  provisionedWorkspaces,
+  type ProvisionedWorkspace,
 } from "@/features/authentication/services/mock-auth";
+import { platformRevision, subscribePlatform } from "@/features/platform/services/mock-platform";
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/session-store";
 
 export function WorkspaceSelectionView() {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  // -1 on the server: provisioned tenants live in browser storage, so they are listed after hydration.
+  const platform = useSyncExternalStore(subscribePlatform, platformRevision, () => -1);
+  const provisioned = platform === -1 ? [] : provisionedWorkspaces();
+  const setUserId = useSessionStore((s) => s.setUserId);
+
+  const onSelectProvisioned = (workspace: ProvisionedWorkspace) => {
+    if (!workspace.ready) {
+      toast.message(`${workspace.name} is still provisioning`, { description: "Try again in a minute." });
+      return;
+    }
+    setUserId(workspace.adminUserId);
+    toast.success(`Signed in to ${workspace.name}`);
+    router.push("/org");
+  };
 
   const onSelect = async (workspaceId: string) => {
     setLoadingId(workspaceId);
@@ -105,6 +123,42 @@ export function WorkspaceSelectionView() {
             </button>
           );
         })}
+
+        {provisioned.map((workspace) => (
+          <button
+            key={workspace.id}
+            type="button"
+            disabled={loadingId !== null}
+            aria-disabled={!workspace.ready}
+            onClick={() => onSelectProvisioned(workspace)}
+            className={cn(
+              "group relative overflow-hidden rounded-2xl border border-border-slate bg-white p-6 text-left shadow-sm transition-all",
+              workspace.ready ? "hover:border-green-lime hover:shadow-xl hover:shadow-navy/5" : "cursor-not-allowed opacity-70",
+            )}
+          >
+            <div className="absolute top-0 right-0 p-3">
+              <Badge className="rounded bg-slate-100 text-[10px] font-bold tracking-wider text-slate-600 uppercase">
+                {workspace.ready ? "New" : "Provisioning"}
+              </Badge>
+            </div>
+            <div className="mb-4 flex items-center gap-4">
+              <div className="flex size-14 items-center justify-center rounded-xl border border-border-slate bg-slate-50 text-xl font-bold text-navy transition-colors group-hover:bg-navy group-hover:text-white">
+                {workspace.initials}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-navy">{workspace.name}</h3>
+                <p className="text-xs text-slate-500">{workspace.role}</p>
+              </div>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-sm">
+              <span className="font-medium text-slate-400">{workspace.meta}</span>
+              <ArrowRightIcon
+                className="size-4 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-green-lime"
+                aria-hidden
+              />
+            </div>
+          </button>
+        ))}
 
         <Button
           type="button"

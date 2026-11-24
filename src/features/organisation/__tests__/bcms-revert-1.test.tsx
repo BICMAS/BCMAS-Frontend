@@ -123,7 +123,7 @@ describe("Bulk Mapping: changes need a second administrator", () => {
     expect((within(panel).getByRole("button", { name: /Approve removal/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("Tom Nguyen", { selector: "span.font-bold" })).toBeTruthy(); // still listed until approved
 
-    currentUser = getMockUser("user-priya"); // HR/L&D Admin
+    currentUser = getMockUser("user-priya"); // HRBP
     view.rerender(<BulkMappingView initialRows={await listBulkMappingRows()} roles={await listMappingRoles()} />);
     await user.click(screen.getByRole("button", { name: /Approve removal for Tom Nguyen/ }));
     await waitFor(() => expect(screen.queryByText("Tom Nguyen", { selector: "span.font-bold" })).toBeNull());

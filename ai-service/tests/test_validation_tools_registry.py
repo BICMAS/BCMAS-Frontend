@@ -160,10 +160,11 @@ def test_backend_write_tools_cannot_be_exposed_to_llm() -> None:
 # ── capability registry ──────────────────────────────────────────────────────
 
 
-def test_catalogue_declares_all_eighteen_capabilities() -> None:
+def test_catalogue_declares_all_twenty_capabilities() -> None:
     codes = [spec.code for spec in PUBLIC_CAPABILITIES]
     assert codes == [f"C{i}" for i in range(1, 7)] + [f"D{i}" for i in range(1, 7)] + [
-        f"T{i}" for i in range(1, 7)
+        f"T{i}"
+        for i in range(1, 9)  # T7 analyze_cv, T8 score_interview (external recruitment)
     ]
 
 

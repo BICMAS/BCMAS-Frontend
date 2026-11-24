@@ -194,6 +194,9 @@ export class HttpAiClient implements AiClient {
 
   designAssessment: AiClient["designAssessment"] = (request) =>
     this.json("POST", "/v1/talent/item-drafts", { body: request });
+  analyzeCv: AiClient["analyzeCv"] = (request) => this.json("POST", "/v1/talent/cv-analyses", { body: request });
+  scoreInterview: AiClient["scoreInterview"] = (request) =>
+    this.json("POST", "/v1/talent/interview-scorings", { body: request });
   scoreAssessment: AiClient["scoreAssessment"] = (assessmentId, request) =>
     this.json("POST", `/v1/talent/assessments/${encodeURIComponent(assessmentId)}/scoring`, { body: request });
   getScoringSet: AiClient["getScoringSet"] = (id) =>

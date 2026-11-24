@@ -1,8 +1,0 @@
-export { RecruitmentCreateView } from "@/features/talent/components/recruitment-create-view";
-export { RecruitmentDetailView } from "@/features/talent/components/recruitment-detail-view";
-export { RecruitmentInviteView } from "@/features/talent/components/recruitment-invite-view";
-export { RecruitmentListView } from "@/features/talent/components/recruitment-list-view";
-export { TalentInsightsView } from "@/features/talent/components/talent-insights-view";
-export { TalentLibraryView } from "@/features/talent/components/talent-library-view";
-export { TalentOverviewView } from "@/features/talent/components/talent-overview-view";
-export { TalentRecordView } from "@/features/talent/components/talent-record-view";

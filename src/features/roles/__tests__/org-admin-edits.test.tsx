@@ -92,13 +92,13 @@ describe("Role details", () => {
 });
 
 describe("About BCMS", () => {
-  it("is in the Organisation Admin sidebar and only there", () => {
+  it("is in the Organisation Admin and HRBP sidebars only", () => {
     const find = (portal: Parameters<typeof getNavigationConfig>[0]) =>
       getNavigationConfig(portal)
         .sections.flatMap((s) => s.items)
         .find((i) => i.label === "About BCMS");
     expect(find("organisation_admin")?.href).toBe("/about");
-    expect(find("hr_ld_admin")).toBeUndefined();
+    expect(find("hr_ld_admin")?.href).toBe("/about");
     expect(find("line_manager")).toBeUndefined();
   });
 

@@ -7,7 +7,7 @@ import { getNavigationConfig } from "@/config/navigation";
 import { EmployeeHomeView } from "@/features/me/components/employee-home-view";
 import { GrowthHubView } from "@/features/me/components/growth-hub-view";
 import { ProgressTimelineView } from "@/features/me/components/progress-timeline-view";
-import { TalentOverviewView } from "@/features/talent/components/talent-overview-view";
+import { RecruitmentOverviewView } from "@/features/recruitment/components/recruitment-overview-view";
 import { searchGlobalIndex } from "@/lib/mock/global-search";
 import type { NavItem, UserPortal } from "@/types";
 
@@ -107,7 +107,7 @@ describe("Promotion", () => {
   });
 
   it("no longer appears on the talent overview", () => {
-    render(<TalentOverviewView />);
+    render(<RecruitmentOverviewView />);
     expect(screen.queryByText(/Promotion/)).toBeNull();
   });
 });

@@ -14,6 +14,12 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from cfp_ai.agents.steps import ApprovalDecisionInput
+from cfp_ai.agents.talent.cv_analysis import AnalyzeCvCapability, CvAnalysis, CvAnalysisRequest
+from cfp_ai.agents.talent.interview_scoring import (
+    InterviewScoring,
+    InterviewScoringRequest,
+    ScoreInterviewCapability,
+)
 from cfp_ai.agents.talent.models import AssessmentEvaluation, AssessmentMethod
 from cfp_ai.agents.talent.store import ScoringSetRef, TalentResultStore
 from cfp_ai.api.routes.dev_plans import run_capability
@@ -85,6 +91,32 @@ def _view(record: ExecutionRecord) -> ScoringView:
         ],
         suggestions=record.suggestions,
     )
+
+
+@router.post("/cv-analyses", response_model=CvAnalysis)
+async def analyze_cv(request: Request, body: CvAnalysisRequest, principal: CurrentPrincipal) -> CvAnalysis:
+    """T7: CV evidence against the role profile (Evidence Found / Not Found / Unclear).
+
+    Called directly, not through the orchestrator, so the CV text is not kept in execution history.
+    """
+    container = request.app.state.container
+    capability = container.capabilities.resolve("talent.analyze_cv", principal, container.deps)
+    assert isinstance(capability, AnalyzeCvCapability)
+    return await capability.analyze(principal, body, request.state.request_id)
+
+
+@router.post("/interview-scorings", response_model=InterviewScoring)
+async def score_interview(
+    request: Request, body: InterviewScoringRequest, principal: CurrentPrincipal
+) -> InterviewScoring:
+    """T8: rubric score suggestions for AI-avatar interview answers (content only; a person confirms).
+
+    Called directly, not through the orchestrator, so the answers are not kept in execution history.
+    """
+    container = request.app.state.container
+    capability = container.capabilities.resolve("talent.score_interview", principal, container.deps)
+    assert isinstance(capability, ScoreInterviewCapability)
+    return await capability.score(principal, body, request.state.request_id)
 
 
 @router.post("/item-drafts", response_model=DraftEnvelope, status_code=201)

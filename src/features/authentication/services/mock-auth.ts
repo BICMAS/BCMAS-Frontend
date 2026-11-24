@@ -1,3 +1,4 @@
+import { listTenants } from "@/features/platform/services/mock-platform";
 import { sleep } from "@/lib/utils";
 
 export type MockAuthResult =
@@ -177,3 +178,32 @@ export const mockWorkspaces = [
 
 export const DEMO_AUTH_HINT =
   "Demo: use any email with password Password123! then MFA code 123456. locked@example.com triggers lockout.";
+
+export type ProvisionedWorkspace = {
+  id: string;
+  initials: string;
+  name: string;
+  role: string;
+  meta: string;
+  /** Provisioning has finished, so the first admin can enter. */
+  ready: boolean;
+  adminUserId: string;
+};
+
+/**
+ * Tenants created on the New Tenant Provisioning page, offered to their first admin.
+ * Sample data: the backend returns the workspaces the signed-in person belongs to.
+ */
+export function provisionedWorkspaces(): ProvisionedWorkspace[] {
+  return listTenants()
+    .filter((tenant) => tenant.adminUserId)
+    .map((tenant) => ({
+      id: tenant.organisationId,
+      initials: tenant.code.slice(0, 2),
+      name: tenant.name,
+      role: "Organisation Admin",
+      meta: tenant.status === "Active" ? `${tenant.plan} · new tenant` : "Provisioning…",
+      ready: tenant.status === "Active",
+      adminUserId: tenant.adminUserId!,
+    }));
+}

@@ -87,7 +87,9 @@ export type CapabilityId =
   | "talent.recommend_scores" // T3
   | "talent.draft_report" // T4
   | "talent.analyze_evidence" // T5
-  | "talent.insights_turn"; // T6
+  | "talent.insights_turn" // T6
+  | "talent.analyze_cv" // T7 (external recruitment CV evidence)
+  | "talent.score_interview"; // T8 (AI-avatar interview answers, content only)
 
 export type Role =
   | "employee"
@@ -1037,6 +1039,79 @@ export type AssessmentReportPayload = {
 };
 
 export type AssessmentReportDraft = Draft<"assessment_report", AssessmentReportPayload>;
+
+/** T7 talent.analyze_cv: CV evidence against a role profile (BCMS Talent Assessment guide §12). */
+export type CvRequirement = {
+  skill_name: string; // 1..120
+  category: "technical" | "behavioural" | "knowledge";
+  target_level: string | null;
+};
+
+export type CvAnalysisRequest = {
+  role_title: string;
+  requirements: CvRequirement[]; // 1..20
+  /** Plain text extracted from the candidate's CV (50..60000 chars). Never logged or orchestrated. */
+  cv_text: string;
+};
+
+export type CvEvidenceStatus = "found" | "not_found" | "unclear";
+
+export type CvSkillEvidence = {
+  skill_name: string;
+  category: "technical" | "behavioural" | "knowledge";
+  target_level: string | null;
+  status: CvEvidenceStatus;
+  confidence: Confidence;
+  /** Verbatim passages from the CV (verified by the service). Empty for not_found. */
+  passages: string[];
+  note: string;
+};
+
+export type CvAnalysis = {
+  role_title: string;
+  skills: CvSkillEvidence[];
+  experience: string[];
+  qualifications: string[];
+  summary: string;
+  coverage_pct: number;
+  evidence_found: number;
+  unclear: number;
+  not_found: number;
+  validation: DraftValidationReport;
+  provenance: AiProvenance;
+  disclaimer: string;
+};
+
+/** T8 talent.score_interview: rubric suggestions for interview answers; a person confirms. */
+export type InterviewRubricLevel = { score: number; descriptor: string };
+
+export type InterviewScoringRequest = {
+  role_title: string;
+  questions: Array<{ question_id: string; competency: string; question: string; rubric: InterviewRubricLevel[] }>; // 1..12
+  /** Typed or transcribed answers. Never orchestrated or stored by the AI service. */
+  answers: Array<{ question_id: string; text: string }>;
+};
+
+export type InterviewQuestionScore = {
+  question_id: string;
+  competency: string;
+  /** A rubric level, or 0 for no relevant evidence. */
+  score: number;
+  max_score: number;
+  confidence: Confidence;
+  /** Verbatim quotes from the answer (verified by the service). */
+  evidence: string[];
+  rationale: string;
+};
+
+export type InterviewScoring = {
+  role_title: string;
+  scores: InterviewQuestionScore[];
+  summary: string;
+  validation: DraftValidationReport;
+  provenance: AiProvenance;
+  disclaimer: string;
+};
 
 export type EvidenceAnalysisRequest = {
   target_level: Level | null; // null = role requirement
@@ -2031,6 +2106,8 @@ export interface AiApiEndpoints {
     request: EvidenceAnalysisRequest;
     response: EvidenceAnalysis;
   };
+  "POST /v1/talent/cv-analyses": { request: CvAnalysisRequest; response: CvAnalysis };
+  "POST /v1/talent/interview-scorings": { request: InterviewScoringRequest; response: InterviewScoring };
   "POST /v1/talent/insights/messages": { request: InsightsTurnRequest; response: Stream<InsightsTurnResult> };
   // v1.4 (pending review): multi-method design, evidence-based scoring with assessor review, reports.
   "POST /v1/talent/item-drafts (v1.4)": { request: AssessmentDesignRequest; response: AssessmentDesignEnvelope };

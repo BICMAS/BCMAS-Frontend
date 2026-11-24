@@ -156,4 +156,108 @@ def report(request: LlmRequest, output_model: type[BaseModel] | None) -> dict[st
     }
 
 
-RESPONDERS = {"talent.score_row": score_row, "talent.draft_items": design, "talent.report": report}
+_YEARS = re.compile(r"\b(19|20)\d{2}\b")
+_QUALIFICATION = re.compile(
+    r"\b(BSc|B\.Sc|MSc|M\.Sc|MBA|BA|MA|PhD|HND|OND|Degree|Diploma|Certified|Certificate|Certification|ACCA|ICAN|CIPM)\b"
+)
+
+
+def cv_analysis(request: LlmRequest, output_model: type[BaseModel] | None) -> dict[str, Any]:
+    """Offline CV analysis: a sentence counts as evidence when it shares the skill's word stems."""
+    facts = extract_input_json(request)
+    cv = facts["cv_text"]
+    lines = [line.strip() for line in cv.splitlines() if line.strip()]
+    sentences = [s for line in lines for s in _sentences(line)]
+    skills = []
+    for req in facts["required_skills"]:
+        stems = {w[:5] for w in re.findall(r"[a-z]+", req["skill_name"].lower()) if len(w) >= 4}
+        best: tuple[float, str] | None = None
+        for sentence in sentences:
+            shared = len(stems & _stems(sentence))
+            ratio = shared / len(stems) if stems else 0
+            if shared and (best is None or ratio > best[0]):
+                best = (ratio, sentence)
+        if best is not None and best[0] >= 0.99 and len(best[1].split()) >= 5:
+            skills.append(
+                {
+                    "skill_name": req["skill_name"],
+                    "status": "found",
+                    "confidence": "high" if len(best[1].split()) >= 8 else "medium",
+                    "passages": [best[1]],
+                    "note": f"The CV describes work involving {req['skill_name'].lower()}.",
+                }
+            )
+        elif best is not None:
+            skills.append(
+                {
+                    "skill_name": req["skill_name"],
+                    "status": "unclear",
+                    "confidence": "low",
+                    "passages": [best[1]] if len(best[1]) >= 8 else [],
+                    "note": "Only a partial or indirect mention; ask the candidate for an example.",
+                }
+            )
+        else:
+            skills.append(
+                {
+                    "skill_name": req["skill_name"],
+                    "status": "not_found",
+                    "confidence": "medium",
+                    "passages": [],
+                    "note": "No relevant passage in the CV. This is not proof the skill is missing.",
+                }
+            )
+    found = sum(1 for s in skills if s["status"] == "found")
+    return {
+        "skills": skills,
+        "experience": [line for line in lines if _YEARS.search(line)][:5],
+        "qualifications": [line for line in lines if _QUALIFICATION.search(line)][:5],
+        "summary": (
+            f"The CV shows clear evidence for {found} of {len(skills)} required skills. "
+            "Other skills are unclear or not mentioned and should be explored with the candidate."
+        ),
+    }
+
+
+def interview_scoring(request: LlmRequest, output_model: type[BaseModel] | None) -> dict[str, Any]:
+    """Offline interview scoring: rubric level from how many descriptor stems the answer shares."""
+    facts = extract_input_json(request)
+    scores = []
+    for q in facts["questions"]:
+        answer = q["answer"]
+        sentences = _sentences(answer) or [answer.strip()]
+        levels = sorted(q["rubric"], key=lambda lvl: lvl["score"])
+        answer_stems = _stems(answer) | _stems(q["question"]) if len(answer.split()) >= 25 else _stems(answer)
+        chosen = levels[0]
+        for lvl in levels:
+            if len(_stems(lvl["descriptor"]) & answer_stems) >= 2:
+                chosen = lvl
+        if len(answer.split()) < 8:
+            chosen = levels[0]
+        quote = max(sentences, key=len)
+        scores.append(
+            {
+                "question_id": q["question_id"],
+                "score": chosen["score"],
+                "confidence": "medium" if len(answer.split()) >= 25 else "low",
+                "evidence": [quote] if len(quote) >= 4 else [],
+                "rationale": (
+                    f"The answer matches the level {chosen['score']} description for {q['competency']}."
+                ),
+            }
+        )
+    return {
+        "scores": scores,
+        "summary": (
+            "Scores are based on the content of each answer against its approved rubric (offline fake)."
+        ),
+    }
+
+
+RESPONDERS = {
+    "talent.score_row": score_row,
+    "talent.interview_scoring": interview_scoring,
+    "talent.draft_items": design,
+    "talent.report": report,
+    "talent.cv_analysis": cv_analysis,
+}

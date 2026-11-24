@@ -46,6 +46,37 @@ export async function downloadWorkbook<Row>({
   URL.revokeObjectURL(url);
 }
 
+export type WorkbookSheet = {
+  sheetName: string;
+  columns: SheetColumn<Record<string, string | number | null>>[];
+  rows: Record<string, string | number | null>[];
+};
+
+/** Builds one .xlsx with several sheets (bold, frozen header rows) and starts the download. */
+export async function downloadWorkbookSheets(filename: string, sheets: WorkbookSheet[]): Promise<void> {
+  const { default: ExcelJS } = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "BCMS";
+  workbook.created = new Date();
+  for (const s of sheets) {
+    const sheet = workbook.addWorksheet(s.sheetName.slice(0, 31), { views: [{ state: "frozen", ySplit: 1 }] });
+    sheet.columns = s.columns.map((column) => ({
+      header: column.header,
+      width: column.width ?? Math.max(12, column.header.length + 4),
+    }));
+    sheet.getRow(1).font = { bold: true };
+    for (const row of s.rows) sheet.addRow(s.columns.map((column) => column.value(row) ?? ""));
+  }
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Reads the first sheet of an .xlsx or a .csv file into header-keyed rows (headers trimmed, lower-cased). */
 export async function readSpreadsheetRows(file: File): Promise<Record<string, string>[]> {
   let table: string[][];

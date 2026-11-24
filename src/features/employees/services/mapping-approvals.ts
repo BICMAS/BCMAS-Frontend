@@ -5,7 +5,7 @@
  *
  * Mapping changes, new employees and removals are submitted as *pending* changes and only take
  * effect once another administrator approves them. An approver must be an Organisation Admin
- * or HR/L&D Admin and can never be the person who submitted the change. Kept in session storage
+ * or HRBP and can never be the person who submitted the change. Kept in session storage
  * so a change submitted by one persona can be approved after switching persona (Dev role).
  * Replace with backend approval APIs when available.
  */
@@ -47,7 +47,7 @@ const APPROVER_PORTALS = new Set(["organisation_admin", "hr_ld_admin"]);
 /** Why `user` may not approve `change`, or null when they may. */
 export function approvalBlocker(change: PendingChange, user: MockUser | null): string | null {
   if (!user) return "Sign in to review changes.";
-  if (!APPROVER_PORTALS.has(user.portal)) return "Only Organisation Admins or HR/L&D Admins can approve.";
+  if (!APPROVER_PORTALS.has(user.portal)) return "Only Organisation Admins or HRBPs can approve.";
   if (change.submittedBy.id === user.id) return "You submitted this change. Another administrator must approve it.";
   return null;
 }
