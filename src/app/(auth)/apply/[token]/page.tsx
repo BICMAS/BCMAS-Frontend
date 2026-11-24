@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PublicApplicationView } from "@/features/recruitment";
 
 export const metadata: Metadata = {
@@ -11,7 +13,16 @@ type PageProps = {
 };
 
 /** Public vacancy application: no BCMS login. */
-export default async function Page({ params }: PageProps) {
+export default function Page({ params }: PageProps) {
+  // The token is only known per request, so it is read inside Suspense and the rest can prerender.
+  return (
+    <Suspense fallback={<LoadingSkeleton rows={4} className="w-full max-w-2xl" />}>
+      <Application params={params} />
+    </Suspense>
+  );
+}
+
+async function Application({ params }: PageProps) {
   const { token } = await params;
   return <PublicApplicationView token={token} />;
 }
