@@ -7,7 +7,10 @@
  *  - Only employees with an approved mapping to an approved role profile are assessed. The profile
  *    is copied when the cycle is activated, so later profile changes do not alter a live assessment.
  *  - Employees rate every skill, add evidence and submit once. Self-ratings never become results.
- *  - Only the assigned reviewer decides, with feedback every time. Verified sets the required level;
+ *  - Self-assessment closes at the end of the cycle's last day, unless an extension is agreed.
+ *    Decisions after the verification deadline are accepted and flagged late.
+ *  - Only the assigned reviewer decides, with feedback every time. Verified records the required level
+ *    or a higher one the evidence supports;
  *    Not verified records the lower level the evidence supports; More evidence returns the skill.
  *  - Results stay hidden until every skill has a decision, calibration is recorded and an
  *    Organisation Admin releases them.
@@ -18,6 +21,7 @@ import { mockUsers } from "@/config/mock-users";
 import { mockEmployees } from "@/features/employees/data/mock-employees";
 import { buildSchedule, ORGANISATION_SCOPE, type CyclesPerYear } from "@/features/ld/assessment-schedule";
 import { listRoleRecords, roleDepartments } from "@/features/roles/services/mock-roles";
+import { isEssentialSkill } from "@/features/roles/services/essential-skills";
 import type { RoleRecord } from "@/features/roles/types";
 import { frameworkLevels, skillLevelDescription } from "@/features/skills/services/mock-skills";
 import type { MockUser } from "@/types/user";
@@ -43,7 +47,11 @@ const ADMIN = "Sarah Jenkins";
 export const DEFAULT_REQUIRED_LEVEL = 3;
 
 const iso = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86_400_000).toISOString();
-const today = (offsetDays = 0) => iso(offsetDays).slice(0, 10);
+/** Local calendar day, so a deadline runs to the end of that day. */
+const today = (offsetDays = 0) => {
+  const d = new Date(Date.now() + offsetDays * 86_400_000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 /* ── scale ─────────────────────────────────────────────────────────────── */
 
@@ -72,13 +80,14 @@ function itemsFor(role: RoleRecord): AssessmentItem[] {
       name: s.name,
       category: "technical" as const,
       required: rankOf(s.levelLabel),
-      essential: s.essential ?? false,
+      essential: isEssentialSkill(role.id, s.name),
     })),
     ...role.behaviouralSkills.map((name) => ({
       ...structuredClone(base),
       skillId: `beh-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       name,
       category: "behavioural" as const,
+      essential: isEssentialSkill(role.id, name),
       required: DEFAULT_REQUIRED_LEVEL,
     })),
   ];
@@ -105,6 +114,7 @@ function makeAssessment(cycleId: string, employeeId: string): CapabilityAssessme
     reviewer: { ...MICHAEL },
     items: itemsFor(role),
     submittedAt: null,
+    extension: null,
     releasedAt: null,
     adjustments: [],
     events: [{ at: iso(-20), actor: "System", action: "Assessment opened", detail: role.title }],
@@ -148,6 +158,7 @@ function seed(): State {
     item.verification = {
       decision: level >= item.required ? "verified" : "not_verified",
       level,
+      late: false,
       feedback: level >= item.required ? "Clear evidence of the required standard." : "Good progress. Show this in a second, independent piece of work.",
       by: MICHAEL.name,
       byUserId: MICHAEL.userId,
@@ -205,7 +216,7 @@ function seed(): State {
   };
 }
 
-const STORAGE_KEY = "bcms-capability-v1";
+const STORAGE_KEY = "bcms-capability-v2";
 let state: State | null = null;
 let loaded = false;
 let revision = 0;
@@ -394,6 +405,7 @@ export type CycleStats = {
   selfVsVerified: number | null;
   skillsMetPct: number | null;
   gapsClosed: number;
+  lateDecisions: number;
 };
 
 const average = (list: number[]) => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : null);
@@ -427,6 +439,7 @@ function statsFor(list: CapabilityAssessment[]): CycleStats {
     selfVsVerified: round1(average(items.filter((i) => i.self !== null).map((i) => i.self! - verifiedLevel(i)!))),
     skillsMetPct: items.length ? Math.round((100 * items.filter((i) => gapOf(i) === 0).length) / items.length) : null,
     gapsClosed,
+    lateDecisions: items.filter((i) => i.verification!.late).length,
   };
 }
 
@@ -570,6 +583,36 @@ function requireOpen(a: CapabilityAssessment) {
   if (db().cycles.find((c) => c.id === a.cycleId)?.status !== "active") throw new CapabilityError("This assessment cycle is not open.");
 }
 
+/** Last day to self-assess: the cycle's end date, or this person's extension. */
+export function selfAssessmentEnds(a: CapabilityAssessment) {
+  return a.extension?.until ?? db().cycles.find((c) => c.id === a.cycleId)?.endsOn ?? null;
+}
+
+/** True when the self-assessment was not submitted in time. */
+export function selfAssessmentClosed(a: CapabilityAssessment) {
+  const ends = selfAssessmentEnds(a);
+  return !a.submittedAt && ends !== null && today() > ends;
+}
+
+function requireInTime(a: CapabilityAssessment) {
+  if (selfAssessmentClosed(a)) throw new CapabilityError("Self-assessment has closed. Ask your reviewer or Organisation Admin for an extension.");
+}
+
+/** Agreed by the reviewer or an Organisation Admin; never past the verification deadline. */
+export function grantExtension(user: Person, id: string, until: string, reason: string) {
+  const a = db().assessments.find((x) => x.id === id && x.organisationId === user.organisationId);
+  if (!a || (!isAdmin(user) && a.reviewer.userId !== user.id)) throw new CapabilityError("Only the reviewer or an Organisation Admin can agree an extension.");
+  if (a.submittedAt) throw new CapabilityError("This self-assessment has already been submitted.");
+  requireOpen(a);
+  const cycle = db().cycles.find((c) => c.id === a.cycleId)!;
+  if (!until || until < today() || (cycle.endsOn && until <= cycle.endsOn)) throw new CapabilityError("Choose a date after the cycle's end date.");
+  if (cycle.verifyBy && until > cycle.verifyBy) throw new CapabilityError("The extension cannot go past the verification deadline.");
+  if (!reason.trim()) throw new CapabilityError("Give a reason.");
+  a.extension = { until, reason: reason.trim(), by: user.name, at: iso() };
+  log(a, user.name, "Extension agreed", `Until ${until}: ${reason.trim()}`);
+  save();
+}
+
 function log(a: CapabilityAssessment, actor: string, action: string, detail: string) {
   a.events.push({ at: iso(), actor, action, detail });
 }
@@ -578,6 +621,7 @@ export function saveSelfRating(user: Person, id: string, skillId: string, level:
   const a = own(user, id);
   requireOpen(a);
   if (a.submittedAt) throw new CapabilityError("You have already submitted this self-assessment.");
+  requireInTime(a);
   if (!frameworkLevels().some((l) => l.rank === level)) throw new CapabilityError("Choose a level from the scale.");
   itemOf(a, skillId).self = level;
   save();
@@ -593,6 +637,7 @@ export function addCapabilityEvidence(user: Person, id: string, skillId: string,
   const disputed = !!item.disagreement && !item.disagreement.outcome;
   if (!disputed) {
     if (!a.releasedAt || decision !== "more_evidence") requireOpen(a);
+    requireInTime(a);
     if (decision && decision !== "more_evidence") throw new CapabilityError("This skill has already been reviewed.");
   }
   if (!input.title.trim()) throw new CapabilityError("Give the evidence a title.");
@@ -616,10 +661,20 @@ export function addCapabilityEvidence(user: Person, id: string, skillId: string,
   save();
 }
 
+/** Skills in the active assessment that can take evidence now (Growth Hub uses this). */
+export function evidenceTargets(user: Person): Array<{ assessmentId: string; skillId: string; name: string }> {
+  const found = db().assessments.find((a) => isOwner(a, user) && a.organisationId === user.organisationId && db().cycles.some((c) => c.id === a.cycleId && c.status === "active"));
+  if (!found || selfAssessmentClosed(found)) return [];
+  return found.items
+    .filter((i) => (!found.releasedAt && !i.verification) || i.verification?.decision === "more_evidence")
+    .map((i) => ({ assessmentId: found.id, skillId: i.skillId, name: i.name }));
+}
+
 export function submitSelfAssessment(user: Person, id: string) {
   const a = own(user, id);
   requireOpen(a);
   if (a.submittedAt) throw new CapabilityError("You have already submitted this self-assessment.");
+  requireInTime(a);
   const missing = a.items.filter((i) => i.self === null);
   if (missing.length) throw new CapabilityError(`Rate every skill first. ${missing.length} left: ${missing.map((i) => i.name).join(", ")}.`);
   a.submittedAt = iso();
@@ -655,14 +710,18 @@ export function disagree(user: Person, id: string, skillId: string, reason: stri
 
 export type DecisionInput = { decision: VerificationDecision; level?: number | null; feedback: string };
 
-function buildVerification(user: Person, item: AssessmentItem, input: DecisionInput): Verification {
+function buildVerification(user: Person, a: CapabilityAssessment, item: AssessmentItem, input: DecisionInput, second = false): Verification {
   if (!input.feedback.trim()) throw new CapabilityError("Feedback is required with every decision.");
   let level: number | null = null;
   if (input.decision === "verified") {
     if (!item.evidence.some((e) => isRecent(e))) {
       throw new CapabilityError("Verified needs at least one piece of evidence from the last 12 months.");
     }
-    level = item.required;
+    level = input.level ?? item.required;
+    const top = Math.max(...frameworkLevels().map((l) => l.rank));
+    if (!Number.isInteger(level) || level < item.required || level > top) {
+      throw new CapabilityError(`Verified means Level ${item.required} or above.`);
+    }
   } else if (input.decision === "not_verified") {
     if (input.level === null || input.level === undefined) throw new CapabilityError("Choose the level the evidence supports.");
     if (!Number.isInteger(input.level) || input.level < 0 || input.level >= item.required) {
@@ -670,7 +729,9 @@ function buildVerification(user: Person, item: AssessmentItem, input: DecisionIn
     }
     level = input.level;
   }
-  return { decision: input.decision, level, feedback: input.feedback.trim(), by: user.name, byUserId: user.id, at: iso() };
+  const verifyBy = db().cycles.find((c) => c.id === a.cycleId)?.verifyBy;
+  const late = !second && !!verifyBy && today() > verifyBy;
+  return { decision: input.decision, level, late, feedback: input.feedback.trim(), by: user.name, byUserId: user.id, at: iso() };
 }
 
 const describe = (v: Verification) => (v.decision === "more_evidence" ? "More evidence requested" : `${v.decision === "verified" ? "Verified" : "Not verified"}: ${levelLabel(v.level)}`);
@@ -683,7 +744,7 @@ export function decide(user: Person, id: string, skillId: string, input: Decisio
   const item = itemOf(a, skillId);
   // After release, only a skill whose requested evidence has arrived can still be decided.
   if (a.releasedAt && item.verification) throw new CapabilityError("Results have been released. Changes go through a second review.");
-  item.verification = buildVerification(user, item, input);
+  item.verification = buildVerification(user, a, item, input);
   log(a, user.name, input.decision === "more_evidence" ? "More evidence requested" : "Decision recorded", `${item.name} – ${describe(item.verification)}`);
   save();
 }
@@ -763,7 +824,7 @@ export function decideSecondReview(user: Person, id: string, skillId: string, in
   if (item.disagreement.outcome) throw new CapabilityError("This second review is finished.");
   if (input.decision === "more_evidence") throw new CapabilityError("A second review ends with a level.");
   const before = item.verification!.level;
-  item.verification = buildVerification(user, item, input);
+  item.verification = buildVerification(user, a, item, input, true);
   item.disagreement.outcome = { changed: item.verification.level !== before, by: user.name, at: iso() };
   log(a, user.name, "Second review decided", `${item.name} – ${describe(item.verification)}${item.disagreement.outcome.changed ? "" : " (unchanged)"}`);
   save();

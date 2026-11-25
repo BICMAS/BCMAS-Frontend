@@ -471,6 +471,12 @@ function CandidateReport({
 
       <section className="space-y-3 rounded-2xl border border-border-slate bg-white p-5 shadow-sm" aria-label="Decision">
         <h2 className="font-bold text-navy">Your decision</h2>
+        {app.proposedOutcome ? (
+          <p className="rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning-soft-foreground">
+            Below the pass mark; not final until a person confirms it.{" "}
+            {app.proposedOutcome.referral ? `HR referred this to you: ${app.proposedOutcome.referral.reason}` : "HR has not confirmed it yet."}
+          </p>
+        ) : null}
         {!done ? (
           <p className="text-sm text-slate-500">This candidate has not finished the recruitment stages yet.</p>
         ) : (

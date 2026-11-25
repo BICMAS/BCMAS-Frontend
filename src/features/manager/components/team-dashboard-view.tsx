@@ -9,27 +9,32 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { managerActions } from "@/features/manager/team-data";
+import { improvements, teamReport } from "@/features/capability/services/analytics";
 import { reviewQueue } from "@/features/capability/services/capability";
-import { useCapabilityUser } from "@/features/capability/use-capability";
+import { PRIORITY_LABEL } from "@/features/capability/types";
+import { downloadText, useCapabilityUser } from "@/features/capability/use-capability";
+import { teamMembers } from "@/features/workforce/mock-workforce";
 import { cn } from "@/lib/utils";
-
-const gaps = [
-  ["AI Governance", "-1.8 Levels", "8 Members", "Critical"],
-  ["Cyber Security Ops", "-0.9 Levels", "5 Members", "High"],
-  ["Stakeholder Mgmt", "-0.7 Levels", "4 Members", "High"],
-];
-
-const summary = [
-  { label: "Team Size", value: "12", note: "Direct Reports", href: "/manager/team" },
-  { label: "Average Capability Score", value: "84%", note: "Verified", href: "/insights/gaps" },
-  { label: "Pending Verification", value: "8", note: "Action", href: "/verification/team" },
-  { label: "Growth Velocity", value: "+1.2", note: "Levels / Year", href: "/insights/gaps" },
-];
 
 export function TeamDashboardView() {
   const router = useRouter();
   const user = useCapabilityUser();
   const waiting = (user ? reviewQueue(user) : []).filter((a) => a.submittedAt && !a.releasedAt && a.items.some((i) => !i.verification));
+  const report = user ? teamReport(user) : null;
+  const progress = user ? improvements(user) : null;
+  const gaps = (report?.skills ?? []).filter((s) => s.averageGap > 0).slice(0, 4);
+  const score = report?.averageMatch == null ? "—" : `${report.averageMatch}%`;
+  const summary = [
+    { label: "Team Size", value: String(teamMembers.length), note: "Direct Reports", href: "/manager/team" },
+    { label: "Average Capability Score", value: score, note: `Verified · ${report?.people ?? 0} with results`, href: "/insights/gaps" },
+    { label: "Pending Verification", value: String(waiting.length), note: "Action", href: "/verification/team" },
+    {
+      label: "Skills Improved",
+      value: progress?.compared ? String(progress.list.length) : "—",
+      note: "Since the last cycle",
+      href: "/insights/gaps",
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -47,15 +52,11 @@ export function TeamDashboardView() {
               type="button"
               variant="secondary"
               onClick={() => {
-                const blob = new Blob(["IT Infrastructure Team\nSize 12\nAverage Capability Score 84%\n"], {
-                  type: "text/plain",
-                });
-                const url = URL.createObjectURL(blob);
-                const anchor = document.createElement("a");
-                anchor.href = url;
-                anchor.download = "team-report.txt";
-                anchor.click();
-                URL.revokeObjectURL(url);
+                downloadText("team-report.txt", [
+                  "IT Infrastructure Team",
+                  `Average capability score ${score} (${report?.people ?? 0} with results)`,
+                  ...gaps.map((g) => `${g.skill}: average gap ${g.averageGap}, ${g.affected.length} of ${g.people} affected`),
+                ]);
                 toast.success("Team report exported");
               }}
             >
@@ -68,7 +69,7 @@ export function TeamDashboardView() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map(({ label, value, note, href }) => ({ label, note, href, value: label === "Pending Verification" ? String(waiting.length) : value })).map(({ label, value, note, href }) => (
+        {summary.map(({ label, value, note, href }) => (
           <Link
             key={label}
             href={href}
@@ -140,8 +141,8 @@ export function TeamDashboardView() {
               </tr>
             </thead>
             <tbody>
-              {gaps.map(([skill, gap, impact, priority]) => {
-                const href = `/manager/team?gap=${encodeURIComponent(skill!)}`;
+              {gaps.map(({ skill, averageGap, affected, people, priority }) => {
+                const href = `/manager/team?gap=${encodeURIComponent(skill)}`;
                 return (
                   <tr
                     key={skill}
@@ -153,10 +154,14 @@ export function TeamDashboardView() {
                         {skill}
                       </Link>
                     </td>
-                    <td>{gap}</td>
-                    <td>{impact}</td>
                     <td>
-                      <Badge variant={priority === "Critical" ? "error" : "warning"}>{priority}</Badge>
+                      {averageGap} level{averageGap === 1 ? "" : "s"}
+                    </td>
+                    <td>
+                      {affected.length} of {people}
+                    </td>
+                    <td>
+                      <Badge variant={priority === "critical" ? "error" : "warning"}>{PRIORITY_LABEL[priority]}</Badge>
                     </td>
                   </tr>
                 );
@@ -181,26 +186,17 @@ export function TeamDashboardView() {
       </div>
       <section className="rounded-2xl border border-border-slate bg-white p-6">
         <h2 className="mb-4 text-sm font-bold tracking-wider text-navy uppercase">Recent Team Progress</h2>
-        <div className="space-y-4 text-sm text-navy">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p>
-              <span className="font-bold">James Miller</span> advanced to Level 4 – Advanced in Cloud Solution Design.
-              <span className="block text-xs text-slate-400">Verified by you · 2 hours ago</span>
-            </p>
-            <Link href="/manager/team/james" className="text-[10px] font-bold tracking-widest uppercase">
-              Feedback
-            </Link>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p>
-              <span className="font-bold">Robert Chen</span> completed the Advanced AI Ethics learning pathway.
-              <span className="block text-xs text-slate-400">Ready for verification · Yesterday</span>
-            </p>
-            <Link href="/verification/team" className="text-[10px] font-bold tracking-widest uppercase">
-              Review
-            </Link>
-          </div>
-        </div>
+        {progress?.list.length ? (
+          <ul className="space-y-2 text-sm text-navy">
+            {progress.list.map((i) => (
+              <li key={`${i.name}-${i.skill}`}>
+                <span className="font-bold">{i.name}</span> moved from Level {i.from} to Level {i.to} in {i.skill}.
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-500">Shown when a team member has released results in two cycles.</p>
+        )}
       </section>
     </div>
   );

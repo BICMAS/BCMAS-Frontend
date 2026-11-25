@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { frameworkLevels } from "@/features/skills/services/mock-skills";
 import { cn } from "@/lib/utils";
 import type { MockUser } from "@/types/user";
 
@@ -20,6 +21,7 @@ import {
   decide,
   decideSecondReview,
   getAssessment,
+  grantExtension,
   latestResults,
   levelDescription,
   levelLabel,
@@ -28,6 +30,7 @@ import {
   respondToAdjustment,
   reviewerOptions,
   reviewQueue,
+  selfAssessmentClosed,
   stageOf,
   type DecisionInput,
 } from "../services/capability";
@@ -41,7 +44,7 @@ import { AuditTrail, PriorityBadge, StageBadge } from "./shared";
 const selectClass = "h-10 rounded-lg border border-border-slate bg-white px-3 text-sm text-navy";
 
 const DETAIL: Record<VerificationDecision, string> = {
-  verified: "The evidence meets the capability requirements. Sets the required level.",
+  verified: "The evidence meets the capability requirements. Records the required level, or a higher one it supports.",
   more_evidence: "Ask the employee to provide further evidence. Nothing is scored yet.",
   not_verified: "The evidence does not meet the requirements yet. Choose the level it supports.",
 };
@@ -79,13 +82,16 @@ function ReviewAssessment({ user, id }: { user: MockUser; id: string }) {
       {a.releasedAt ? <MatchCards items={a.items} /> : null}
       {!a.submittedAt ? (
         <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-          The employee has not submitted this self-assessment yet, so nothing can be decided.
+          {selfAssessmentClosed(a)
+            ? "Self-assessment closed before the employee submitted. Agree an extension if there is a good reason."
+            : "The employee has not submitted this self-assessment yet, so nothing can be decided."}
         </p>
       ) : (
         <p className="text-sm text-slate-500" aria-live="polite">
           {decided} of {a.items.length} skills decided
         </p>
       )}
+      {!a.submittedAt && (isReviewer || user.portal === "organisation_admin") ? <Extension user={user} assessment={a} /> : null}
       <AdjustmentRequests user={user} assessment={a} />
       {a.items.map((item) => (
         <SkillReview key={item.skillId} user={user} assessment={a} item={item} isReviewer={isReviewer} />
@@ -136,7 +142,8 @@ function SkillReview({
       {v ? (
         <p className="text-sm text-slate-600">
           <span className="font-bold text-navy">{DECISION_LABEL[v.decision]}</span>
-          {v.level === null ? "" : ` · ${levelLabel(v.level)}`} · {v.by}, {formatDay(v.at)}. {v.feedback}
+          {v.level === null ? "" : ` · ${levelLabel(v.level)}`}
+          {v.late ? " · after the deadline" : ""} · {v.by}, {formatDay(v.at)}. {v.feedback}
         </p>
       ) : null}
       {item.disagreement ? <DisagreementNote user={user} assessment={a} item={item} /> : null}
@@ -168,6 +175,7 @@ function DecisionForm({ item, second, onSubmit }: { item: AssessmentItem; second
   const options: VerificationDecision[] = second ? ["verified", "not_verified"] : ["verified", "more_evidence", "not_verified"];
   const canVerify = item.evidence.some((e) => isRecent(e));
   const levels = Array.from({ length: item.required }, (_, i) => i);
+  const higher = frameworkLevels().map((l) => l.rank).filter((l) => l >= item.required);
   const id = `feedback-${item.skillId}`;
   return (
     <form
@@ -194,7 +202,10 @@ function DecisionForm({ item, second, onSubmit }: { item: AssessmentItem; second
             className="mt-1"
             disabled={option === "verified" && !canVerify}
             checked={decision === option}
-            onChange={() => setDecision(option)}
+            onChange={() => {
+              setDecision(option);
+              setLevel(option === "verified" ? item.required : null);
+            }}
           />
           <span>
             <span className="block text-sm font-bold text-navy">{DECISION_LABEL[option]}</span>
@@ -204,12 +215,12 @@ function DecisionForm({ item, second, onSubmit }: { item: AssessmentItem; second
           </span>
         </label>
       ))}
-      {decision === "not_verified" ? (
+      {decision === "not_verified" || decision === "verified" ? (
         <label className="block text-xs font-bold text-navy">
           Level the evidence supports
           <select className={cn(selectClass, "mt-1 block font-normal")} value={level ?? ""} onChange={(e) => setLevel(e.target.value === "" ? null : Number(e.target.value))}>
-            <option value="">Choose…</option>
-            {levels.map((l) => (
+            {decision === "verified" ? null : <option value="">Choose…</option>}
+            {(decision === "verified" ? higher : levels).map((l) => (
               <option key={l} value={l}>
                 {levelLabel(l)}
               </option>
@@ -300,6 +311,36 @@ function AdjustmentRequests({ user, assessment: a }: { user: MockUser; assessmen
         </div>
       ))}
     </section>
+  );
+}
+
+/** More time to self-assess, up to the verification deadline. */
+function Extension({ user, assessment: a }: { user: MockUser; assessment: CapabilityAssessment }) {
+  const [until, setUntil] = useState("");
+  const [reason, setReason] = useState("");
+  return (
+    <form
+      className="space-y-3 rounded-2xl border border-border-slate bg-white p-6"
+      aria-label="Extension"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (runCapability(() => grantExtension(user, a.id, until, reason), "Extension agreed")) setReason("");
+      }}
+    >
+      <h2 className="font-bold text-navy">Extension</h2>
+      {a.extension ? (
+        <p className="text-sm text-slate-600">
+          Until {formatDay(a.extension.until)}, agreed by {a.extension.by}: {a.extension.reason}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Input className="max-w-44" type="date" aria-label="Extend until" value={until} onChange={(e) => setUntil(e.target.value)} />
+        <Input className="max-w-sm" aria-label="Reason for extension" placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <Button type="submit" variant="secondary" disabled={!until || !reason.trim()}>
+          Agree extension
+        </Button>
+      </div>
+    </form>
   );
 }
 

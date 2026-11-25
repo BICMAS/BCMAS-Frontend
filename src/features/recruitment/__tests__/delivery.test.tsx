@@ -9,18 +9,20 @@ import { mockClient, renderWithAi } from "@/features/ai/testing";
 
 import { CandidateAssessmentView } from "../components/candidate-assessment-view";
 import { CandidateProfileView } from "../components/candidate-profile-view";
-import { getCandidate } from "../services/candidates";
+import { completeHumanReview, getCandidate } from "../services/candidates";
 import {
   attemptFor,
   getCandidateAssessment,
   hrAttemptView,
   inviteToAssessment,
+  grantExtraTime,
   resendInvitation,
   saveAnswer,
   scoreWrittenAnswer,
   startAssessment,
   submitAssessment,
 } from "../services/delivery";
+import { confirmNotProgressed, referToHiringManager } from "../services/outcome-review";
 import { listOutbox, recruitmentStore, resetRecruitment } from "../services/vacancies";
 
 // BCMS Talent Assessment guide, step 6b: assessment invitation, delivery and scoring.
@@ -159,8 +161,53 @@ describe("Scoring and routing", () => {
     const attempt = attemptFor(GEC, "app-se-2")!;
     expect(attempt.score).toMatchObject({ percent: 0, outcome: "not_passed" });
     const c = getCandidate(GEC, "app-se-2")!;
-    expect(c.stage).toBe("not_progressed");
+    // A person confirms the outcome before it is final.
+    expect(c.stage).toBe("human_review");
+    expect(c.proposedOutcome).toMatchObject({ stage: "assessment", referral: null });
     expect(c.stageHistory.at(-1)).toMatchObject({ actor: "BCMS (approved threshold)", note: expect.stringContaining("threshold of 70%") });
+    expect(() => completeHumanReview(GEC, "app-se-2", "", HRBP)).toThrow(/Confirm the outcome/);
+    expect(() => confirmNotProgressed(GEC, "app-se-2", " ", HRBP)).toThrow(/what you checked/);
+    expect(() => confirmNotProgressed("org-ths", "app-se-2", "x", HRBP)).toThrow();
+    confirmNotProgressed(GEC, "app-se-2", "Answers and scores checked; no technical problems.", HRBP);
+    expect(getCandidate(GEC, "app-se-2")).toMatchObject({ stage: "not_progressed", proposedOutcome: null });
+    expect(() => confirmNotProgressed(GEC, "app-se-2", "again", HRBP)).toThrow(/no outcome/);
+    expect(attemptFor(GEC, "app-se-2")!.score).toMatchObject({ percent: 0, outcome: "not_passed" });
+  });
+
+  it("lets HR refer a below-threshold result to the Hiring Manager once", () => {
+    const token = inviteToAssessment(GEC, "app-se-2", HRBP);
+    startAssessment(token);
+    submitAssessment(token);
+    referToHiringManager(GEC, "app-se-2", "Connection dropped twice.", HRBP);
+    expect(getCandidate(GEC, "app-se-2")!.stage).toBe("human_review");
+    expect(() => referToHiringManager(GEC, "app-se-2", "again", HRBP)).toThrow(/already/);
+  });
+
+  it("shows HR the outcome to confirm", async () => {
+    const token = inviteToAssessment(GEC, "app-se-2", HRBP);
+    startAssessment(token);
+    submitAssessment(token);
+    renderWithAi(<CandidateProfileView candidateId="app-se-2" />, mockClient("user-priya"));
+    const panel = await screen.findByRole("region", { name: "Outcome to confirm" });
+    await userEvent.type(within(panel).getByRole("textbox"), "Checked the answers.");
+    await userEvent.click(within(panel).getByRole("button", { name: "Confirm Not Progressed" }));
+    expect(getCandidate(GEC, "app-se-2")!.stage).toBe("not_progressed");
+  });
+
+  it("adds extra time as an adjustment, with a reason and a limit", () => {
+    const token = inviteToAssessment(GEC, "app-se-1", HRBP);
+    expect(() => grantExtraTime(GEC, "app-se-1", 10, "", HRBP)).toThrow(/reason/);
+    expect(() => grantExtraTime(GEC, "app-se-1", 121, "x", HRBP)).toThrow(/120/);
+    expect(() => grantExtraTime("org-ths", "app-se-1", 10, "x", HRBP)).toThrow();
+    grantExtraTime(GEC, "app-se-1", 15, "Adjustment agreed", HRBP);
+    expect(getCandidateAssessment(token)!.durationMinutes).toBe(45);
+    startAssessment(token);
+    const record = attemptRecord("app-se-1");
+    record.startedAt = new Date(Date.now() - 40 * 60_000).toISOString(); // past 30 minutes, inside 45
+    expect(getCandidateAssessment(token)!.status).toBe("in_progress");
+    record.startedAt = new Date(Date.now() - 46 * 60_000).toISOString();
+    expect(getCandidateAssessment(token)!.status).toBe("submitted");
+    expect(() => grantExtraTime(GEC, "app-se-1", 5, "late", HRBP)).toThrow(/already submitted/);
   });
 });
 

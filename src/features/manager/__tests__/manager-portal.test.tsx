@@ -49,7 +49,7 @@ describe("Team Dashboard", () => {
     expect(card(/Team Size/).getAttribute("href")).toBe("/manager/team");
     expect(card(/Average Capability Score/).getAttribute("href")).toBe("/insights/gaps");
     expect(card(/Pending Verification\s*1/).getAttribute("href")).toBe("/verification/team");
-    expect(card(/Growth Velocity/).getAttribute("href")).toBe("/insights/gaps");
+    expect(card(/Skills Improved/).getAttribute("href")).toBe("/insights/gaps");
   });
 
   it("shows a clickable Manager Action Centre", async () => {
@@ -69,8 +69,8 @@ describe("Team Dashboard", () => {
 
   it("links gap rows to the affected employees", () => {
     render(<TeamDashboardView />);
-    expect(screen.getByRole("link", { name: "AI Governance" }).getAttribute("href")).toBe(
-      "/manager/team?gap=AI%20Governance",
+    expect(screen.getByRole("link", { name: "Microservices Design" }).getAttribute("href")).toBe(
+      "/manager/team?gap=Microservices%20Design",
     );
   });
 });
@@ -116,10 +116,11 @@ describe("Team Directory", () => {
     expect(screen.getByText("3 overdue learning activities")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Clear filter" }).getAttribute("href")).toBe("/manager/team");
     unmount();
-    search = new URLSearchParams("gap=Stakeholder Mgmt");
+    search = new URLSearchParams("gap=Microservices Design");
     render(<TeamDirectoryView />);
-    expect(screen.getByText("Employees affected by the Stakeholder Mgmt gap")).toBeTruthy();
-    expect(screen.queryByText("James Miller")).toBeNull();
+    expect(screen.getByText("Employees affected by the Microservices Design gap")).toBeTruthy();
+    expect(screen.getByText("James Miller")).toBeTruthy();
+    expect(screen.queryByText("Sarah Connor")).toBeNull();
   });
 });
 
@@ -183,21 +184,21 @@ describe("Team Progress", () => {
     expect(screen.getByText(/View your team's verified capability strengths, identify critical skill gaps/)).toBeTruthy();
     expect(screen.getByText(/Avg Team Capability Match/)).toBeTruthy();
     expect(screen.getByText("Strongest Team Capability")).toBeTruthy();
-    const gap = screen.getByRole("button", { name: "AI Governance" });
+    const gap = screen.getByRole("button", { name: "Microservices Design" });
     expect(gap.getAttribute("aria-expanded")).toBe("false");
     await user.click(gap);
     expect(gap.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText("Employees contributing to this gap")).toBeTruthy();
-    expect(screen.getAllByText("Robert Chen").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("James Miller").length).toBeGreaterThan(0);
     const actions = screen.getByRole("heading", { name: "Team Developmental Actions" }).closest("section")!;
     expect(within(actions).getAllByRole("link").length).toBeGreaterThan(0);
   });
 
-  it("is unchanged for other portals", () => {
+  it("shows other portals the figures without names or actions", () => {
     asHr();
     render(<GapAnalysisView />);
-    expect(screen.getByText("Top Capability Strength")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "AI Governance" })).toBeNull();
+    expect(screen.getByText("Average capability match")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Microservices Design" })).toBeNull();
     expect(screen.queryByText("Team Developmental Actions")).toBeNull();
   });
 });

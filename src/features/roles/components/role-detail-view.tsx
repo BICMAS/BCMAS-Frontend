@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EssentialSkillsCard } from "@/features/roles/components/essential-skills-card";
 import { RoleDetailsCard } from "@/features/roles/components/role-details-card";
 import { RoleStatusBadge } from "@/features/roles/components/role-status-badge";
 import { useHydratedUser } from "@/features/talent/use-hydrated-user";
@@ -166,6 +167,7 @@ export function RoleDetailView({ role }: RoleDetailViewProps) {
               </div>
             </div>
           </div>
+          <EssentialSkillsCard role={role} />
         </TabsContent>
 
         <TabsContent value="employees" className="mt-6">

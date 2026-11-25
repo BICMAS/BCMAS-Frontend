@@ -239,7 +239,7 @@ export function dropOffByStage(organisationId: string, f: InsightFilters = {}) {
   const counts = new Map<ApplicationStage, number>();
   for (const r of rows(organisationId, f)) {
     if (r.app.stage !== "not_progressed") continue;
-    const before = [...r.app.stageHistory].reverse().find((h) => h.stage !== "not_progressed")?.stage ?? "new_application";
+    const before = [...r.app.stageHistory].reverse().find((h) => h.stage !== "not_progressed" && h.stage !== "human_review")?.stage ?? "new_application";
     counts.set(before, (counts.get(before) ?? 0) + 1);
   }
   return [...counts.entries()].map(([stage, count]) => ({ stage, count }));

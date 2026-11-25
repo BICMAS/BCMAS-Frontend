@@ -1,8 +1,12 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getMockUser } from "@/config/mock-users";
+import { EssentialSkillsCard } from "@/features/roles/components/essential-skills-card";
+import { resetEssentialSkills, setEssentialSkill } from "@/features/roles/services/essential-skills";
+import { listRoleRecords } from "@/features/roles/services/mock-roles";
+import { ProgressTimelineView } from "@/features/me/components/progress-timeline-view";
 import type { MockUser } from "@/types/user";
 
 import { CycleDashboardView } from "../components/cycles";
@@ -20,7 +24,9 @@ import {
   decideSecondReview,
   disagree,
   getAssessment,
+  evidenceTargets,
   getCapabilityCycle,
+  grantExtension,
   levelLabel,
   listCapabilityCycles,
   myAssessment,
@@ -37,6 +43,7 @@ import {
   stageOf,
   submitSelfAssessment,
 } from "../services/capability";
+import { departmentTrend, improvements, teamReport } from "../services/analytics";
 import { capabilityMatch, disagreeBy, evidenceWarnings, gapOf, isRecent, priorityOf } from "../services/scoring";
 import type { AssessmentItem } from "../types";
 
@@ -69,7 +76,7 @@ const item = (required: number, level: number | null, over: Partial<AssessmentIt
   essential: false,
   self: 5,
   evidence: [],
-  verification: { decision: level === null ? "more_evidence" : "verified", level, feedback: "", by: "", byUserId: "", at: "" },
+  verification: { decision: level === null ? "more_evidence" : "verified", level, late: false, feedback: "", by: "", byUserId: "", at: "" },
   disagreement: null,
   ...over,
 });
@@ -98,6 +105,7 @@ function releaseJames() {
 
 beforeEach(() => {
   resetCapability();
+  resetEssentialSkills();
   push.mockReset();
   current = JAMES;
 });
@@ -271,6 +279,106 @@ describe("Release and second review", () => {
 
   it("refuses a disagreement after 10 working days", () => {
     expect(() => disagree(JAMES, "cycle-h1-emp-8721", "skill-micro", "This was a long time ago.")).toThrow("passed");
+  });
+});
+
+describe("Deadlines", () => {
+  afterEach(() => void vi.useRealTimers());
+  const later = (days: number) => vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + days * 86_400_000 });
+
+  it("refuses late self-assessment unless an extension is agreed", () => {
+    expect(() => grantExtension(JAMES, JAMES_ID, day(15), "x")).toThrow("reviewer");
+    expect(() => grantExtension(MICHAEL, JAMES_ID, day(10), "x")).toThrow("after the cycle");
+    expect(() => grantExtension(MICHAEL, JAMES_ID, day(40), "x")).toThrow("verification deadline");
+    later(13); // the cycle ends on day 12
+    expect(() => saveSelfRating(JAMES, JAMES_ID, "skill-cloud", 4)).toThrow("closed");
+    expect(() => addCapabilityEvidence(JAMES, JAMES_ID, "skill-cloud", evidence(day(-3)))).toThrow("closed");
+    expect(() => submitSelfAssessment(JAMES, JAMES_ID)).toThrow("closed");
+    grantExtension(MICHAEL, JAMES_ID, day(5), "Sick leave");
+    saveSelfRating(JAMES, JAMES_ID, "skill-cloud", 4);
+    later(6); // past the extension
+    expect(() => saveSelfRating(JAMES, JAMES_ID, "skill-cloud", 5)).toThrow("closed");
+  });
+
+  it("allows the last day itself", () => {
+    later(12);
+    saveSelfRating(JAMES, JAMES_ID, "skill-cloud", 4);
+  });
+
+  it("accepts late decisions and flags them", () => {
+    decide(MICHAEL, ELENA, "skill-cloud", { decision: "verified", feedback: "x" });
+    later(27); // verification was due on day 26
+    decide(MICHAEL, ELENA, "skill-k8s", { decision: "verified", feedback: "x" });
+    const a = getAssessment(MICHAEL, ELENA)!;
+    expect(a.items.map((i) => i.verification?.late)).toContain(true);
+    expect(cycleStats(SARAH, "cycle-h2").overall.lateDecisions).toBe(1);
+  });
+});
+
+describe("Higher levels and essential skills", () => {
+  it("records a level above the requirement; the match stays capped", () => {
+    expect(() => decide(MICHAEL, ELENA, "skill-k8s", { decision: "verified", level: 3, feedback: "x" })).toThrow("or above");
+    expect(() => decide(MICHAEL, ELENA, "skill-k8s", { decision: "verified", level: 6, feedback: "x" })).toThrow("or above");
+    decide(MICHAEL, ELENA, "skill-k8s", { decision: "verified", level: 5, feedback: "x" });
+    const i = getAssessment(MICHAEL, ELENA)!.items.find((x) => x.skillId === "skill-k8s")!;
+    expect(i.verification!.level).toBe(5);
+    expect(gapOf(i)).toBe(0);
+    expect(capabilityMatch([i]).percent).toBe(100);
+  });
+
+  it("marks essential skills on the role, for cycles activated later", async () => {
+    const role = listRoleRecords().find((r) => r.id === "role-ssa")!;
+    expect(() => setEssentialSkill(MICHAEL, "role-ssa", "Kubernetes & Docker", true)).toThrow("Organisation Admin");
+    expect(() => setEssentialSkill(SARAH, "role-ssa", "Juggling", true)).toThrow("not in this role");
+    current = PRIYA;
+    render(<EssentialSkillsCard role={role} />);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Kubernetes & Docker is essential" }));
+    expect(getAssessment(MICHAEL, ELENA)!.items.some((i) => i.essential)).toBe(false); // live assessment unchanged
+    releaseJames();
+    getAssessment(MICHAEL, ELENA)!.items.forEach((i) => decide(MICHAEL, ELENA, i.skillId, { decision: "not_verified", level: 1, feedback: "x" }));
+    releaseResults(SARAH, "cycle-h2");
+    closeCycle(SARAH, "cycle-h2");
+    const id = createCapabilityCycle(SARAH, { name: "Next", scope: "Entire organisation", year: 2030, cyclesPerYear: 1, number: 1 });
+    activateCycle(SARAH, id, { startsOn: day(0), endsOn: day(20), verifyBy: day(30) });
+    expect(myAssessment(JAMES)!.items.filter((i) => i.essential).map((i) => i.name)).toEqual(["Kubernetes & Docker"]);
+  });
+});
+
+describe("Reports", () => {
+  it("uses released results only, with the number of people", () => {
+    const before = teamReport(MICHAEL);
+    expect(before).toMatchObject({ people: 1, averageMatch: 88 });
+    expect(before.biggestGap).toMatchObject({ skill: "Microservices Design", averageGap: 2, priority: "critical" });
+    decide(MICHAEL, ELENA, "skill-cloud", { decision: "not_verified", level: 0, feedback: "x" });
+    expect(teamReport(MICHAEL)).toEqual(before); // unreleased decisions do not count
+    expect(teamReport(JAMES).people).toBe(1);
+    expect(teamReport({ ...SARAH, organisationId: "org-ths" })).toMatchObject({ people: 0, averageMatch: null });
+  });
+
+  it("compares cycles and lists improvements", () => {
+    releaseJames();
+    expect(departmentTrend(SARAH)).toMatchObject({ rows: [{ department: "IT Infrastructure", values: [88, 98] }] });
+    const result = improvements(SARAH);
+    expect(result).toMatchObject({ compared: 1, gapsClosed: 2 });
+    expect(result.list.map((i) => i.skill)).toEqual(["Microservices Design", "Cross-team Collaboration"]);
+  });
+});
+
+describe("Growth Hub evidence", () => {
+  it("adds evidence to a chosen assessment skill", async () => {
+    expect(evidenceTargets(JAMES)).toHaveLength(8);
+    expect(evidenceTargets(MICHAEL)).toEqual([]);
+    const { container } = render(<ProgressTimelineView />);
+    await userEvent.selectOptions(screen.getByLabelText(/Linked Growth Area/i), "skill:skill-k8s");
+    await userEvent.type(screen.getByLabelText(/Evidence Title/i), "Cluster upgrade");
+    await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, new File(["a"], "cluster.pdf", { type: "application/pdf" }));
+    const submit = screen.getByRole("button", { name: "Submit Evidence" }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true); // needs the work date
+    fireEvent.change(screen.getByLabelText(/When was the work done/i), { target: { value: day(-20) } });
+    await userEvent.click(submit);
+    await screen.findByText(/Cluster upgrade \(cluster\.pdf\)/);
+    const item = myAssessment(JAMES)!.items.find((i) => i.skillId === "skill-k8s")!;
+    expect(item.evidence.map((e) => e.title)).toEqual(["Cluster upgrade"]);
   });
 });
 

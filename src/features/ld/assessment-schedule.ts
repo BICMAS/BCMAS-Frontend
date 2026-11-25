@@ -60,15 +60,3 @@ export const ASSESSMENT_SCOPES = [
   "Operations",
   "Legal",
 ];
-
-/** Average capability match (%) per department in previous cycles (mock). */
-export const departmentPerformance = {
-  cycles: ["2023 Annual", "2024 H1", "2024 H2"],
-  rows: [
-    { department: "IT", values: [64, 70, 78] },
-    { department: "HR", values: [71, 73, 76] },
-    { department: "Finance", values: [69, 74, 81] },
-    { department: "Operations", values: [62, 66, 74] },
-    { department: "Legal", values: [75, 74, 77] },
-  ],
-};

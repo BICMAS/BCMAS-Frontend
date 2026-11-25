@@ -14,9 +14,12 @@ import {
   directoryFocusLabels,
   isDirectoryFocus,
   membersForFocus,
-  membersWithGap,
   overdueLearning,
 } from "@/features/manager/team-data";
+import { teamReport } from "@/features/capability/services/analytics";
+import { latestResults } from "@/features/capability/services/capability";
+import { capabilityMatch } from "@/features/capability/services/scoring";
+import { useCapabilityUser } from "@/features/capability/use-capability";
 import { teamMembers, type TeamMember } from "@/features/workforce/mock-workforce";
 import { cn } from "@/lib/utils";
 
@@ -48,9 +51,17 @@ export function TeamDirectoryView() {
   const gap = params.get("gap");
   const focus = isDirectoryFocus(focusParam) ? focusParam : null;
   const [query, setQuery] = useState("");
+  const user = useCapabilityUser();
+  const results = user ? latestResults(user) : [];
+  const affected = new Set(gap && user ? teamReport(user).skills.find((s) => s.skill === gap)?.affected.map((p) => p.name) : []);
+  const scoreOf = (member: TeamMember) => {
+    const found = results.find((a) => a.employeeName === member.name);
+    const percent = found ? capabilityMatch(found.items).percent : null;
+    return percent === null ? "Not assessed" : `${percent}%`;
+  };
   const [view, setView] = useState<ViewMode>("cards");
 
-  const scoped = focus ? membersForFocus(focus) : gap ? membersWithGap(gap) : teamMembers;
+  const scoped = focus ? membersForFocus(focus) : gap ? teamMembers.filter((m) => affected.has(m.name)) : teamMembers;
   const q = query.trim().toLowerCase();
   const members = q
     ? scoped.filter((m) => m.name.toLowerCase().includes(q) || m.title.toLowerCase().includes(q))
@@ -141,7 +152,7 @@ export function TeamDirectoryView() {
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <dt className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Capability Score</dt>
-                    <dd className="font-bold text-navy">{member.match}%</dd>
+                    <dd className="font-bold text-navy">{scoreOf(member)}</dd>
                   </div>
                   <div>
                     <dt className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">{statLabel}</dt>
@@ -195,7 +206,7 @@ export function TeamDirectoryView() {
                     <td className="px-4 py-3">
                       <Badge variant={member.status === "Aligned" ? "success" : "warning"}>{member.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 font-bold text-navy">{member.match}%</td>
+                    <td className="px-4 py-3 font-bold text-navy">{scoreOf(member)}</td>
                     <td className="px-4 py-3 text-navy">
                       <span className="text-xs text-slate-500">{statLabel}: </span>
                       {statValue}

@@ -30,6 +30,7 @@ import {
   startInterview,
   submitInterview,
 } from "../services/interview";
+import { confirmNotProgressed } from "../services/outcome-review";
 import { listOutbox, resetRecruitment } from "../services/vacancies";
 
 // BCMS Talent Assessment guide, step 7a: AI-avatar competency interview.
@@ -161,8 +162,10 @@ describe("Scoring: AI suggests, a person confirms", () => {
   it("does not progress a candidate below the interview threshold", () => {
     completeInterview({ q01: "I helped." });
     confirmInterviewScores(GEC, APP, { q01: { score: 1 }, q02: { score: 0 }, q03: { score: 0 }, q04: { score: 0 } }, HRBP);
-    expect(getCandidate(GEC, APP)!.stage).toBe("not_progressed");
+    expect(getCandidate(GEC, APP)).toMatchObject({ stage: "human_review", proposedOutcome: { stage: "interview" } });
     expect(getCandidate(GEC, APP)!.stageHistory.at(-1)?.note).toMatch(/6% against the approved interview threshold of 65%/);
+    confirmNotProgressed(GEC, APP, "Scores checked.", HRBP);
+    expect(getCandidate(GEC, APP)!.stage).toBe("not_progressed");
   });
 });
 

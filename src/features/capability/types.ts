@@ -45,6 +45,8 @@ export type Verification = {
   /** The verified level; null while more evidence is needed. 0 = no level evidenced. */
   level: number | null;
   feedback: string;
+  /** Decided after the cycle's verification deadline (flagged, not refused). */
+  late: boolean;
   by: string;
   byUserId: string;
   at: string;
@@ -88,6 +90,8 @@ export type CapabilityAssessment = {
   reviewer: { userId: string; name: string };
   items: AssessmentItem[];
   submittedAt: string | null;
+  /** Self-assessment extension agreed for this person (YYYY-MM-DD). */
+  extension: { until: string; reason: string; by: string; at: string } | null;
   /** When results became final and visible to the employee. */
   releasedAt: string | null;
   adjustments: Array<{ request: string; at: string; response: { text: string; by: string; at: string } | null }>;

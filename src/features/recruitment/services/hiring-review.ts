@@ -6,7 +6,7 @@
  *  - The report shows the saved assessment version, scoring rule and threshold snapshot used.
  *    Raw answers and scores are read-only: the Hiring Manager cannot edit them.
  *  - Decisions (Select for Physical Interview, Hold, Not Progressed) are recorded with who and
- *    when. Changing the automatic, threshold-based outcome is an override: it needs a reason and
+ *    when. A below-threshold result is proposed and a person confirms it. Changing the threshold-based outcome is an override: it needs a reason and
  *    is audited. The employer remains responsible for the final hiring decision.
  */
 import { getMockOrganisation } from "@/config/mock-users";
@@ -223,6 +223,7 @@ export function decide(
   app.decisions.push(record);
   if (decision === "not_progressed" && app.stage !== "not_progressed") {
     app.stage = "not_progressed";
+    app.proposedOutcome = null;
     app.stageHistory.push({ stage: "not_progressed", at: record.at, actor: user.name, note: `Hiring Manager decision: ${record.note}` });
   }
   if (decision === "selected" || decision === "not_progressed") outcomeEmail(app, decision);
@@ -252,6 +253,7 @@ export function overrideOutcome(
   };
   app.decisions.push(record);
   app.stage = to;
+  app.proposedOutcome = null;
   app.stageHistory.push({ stage: to, at: record.at, actor: user.name, note: `Override by Hiring Manager: ${record.note}` });
   recruitmentStore.save();
 }

@@ -20,20 +20,9 @@ export function isDirectoryFocus(value: string | null): value is DirectoryFocus 
 /** Overdue learning activities per direct report. */
 export const overdueLearning: Record<string, number> = { james: 3, robert: 2 };
 
-/** Skill gaps per direct report (the dashboard's "Employees affected"). */
-export const memberGapSkills: Record<string, string[]> = {
-  james: ["AI Governance", "Cyber Security Ops"],
-  "sarah-connor": ["Stakeholder Mgmt"],
-  robert: ["AI Governance", "Cyber Security Ops", "Stakeholder Mgmt"],
-};
-
 export function membersForFocus(focus: DirectoryFocus): TeamMember[] {
   if (focus === "assessment") return teamMembers.filter((m) => m.pendingAssessments > 0);
   return teamMembers.filter((m) => (overdueLearning[m.id] ?? 0) > 0);
-}
-
-export function membersWithGap(skill: string): TeamMember[] {
-  return teamMembers.filter((m) => memberGapSkills[m.id]?.includes(skill));
 }
 
 export type ManagerAction = { id: string; action: string; detail: string; href: string };
@@ -105,61 +94,4 @@ export const planProgress: Record<string, PlanProgress> = {
       nudge: true,
     },
   },
-};
-
-export type GapContributor = { memberId: string; current: string; required: string };
-
-/** Direct reports contributing to each team capability deficit (Team Progress drill-down). */
-export const gapContributors: Record<string, GapContributor[]> = {
-  "AI Governance": [
-    { memberId: "james", current: "Level 2", required: "Level 4" },
-    { memberId: "robert", current: "Level 2", required: "Level 4" },
-  ],
-  "Secure SDLC": [
-    { memberId: "robert", current: "Level 2", required: "Level 3" },
-    { memberId: "sarah-connor", current: "Level 3", required: "Level 4" },
-  ],
-  "DevOps Automation": [{ memberId: "sarah-connor", current: "Level 3", required: "Level 3" }],
-};
-
-export type DevelopmentalAction = { action: string; detail: string; priority: "Critical" | "High" | "Standard"; href: string };
-
-/** Team Developmental Actions: key actions required to drive growth, per department tab. */
-export const developmentalActions: Record<string, DevelopmentalAction[]> = {
-  "IT Dept": [
-    {
-      action: "Close the AI Governance gap",
-      detail: "Assign Advanced AI Governance 2024 to affected team members and review their plans.",
-      priority: "Critical",
-      href: "/ai/plans",
-    },
-    {
-      action: "Strengthen Secure SDLC practice",
-      detail: "Pair members with secure-design reviews on the next two releases.",
-      priority: "High",
-      href: "/ai/plans",
-    },
-    {
-      action: "Use Infrastructure Design strength",
-      detail: "Ask your strongest designers to mentor colleagues through production changes.",
-      priority: "Standard",
-      href: "/manager/team",
-    },
-  ],
-  Finance: [
-    {
-      action: "Build Data Storytelling skills",
-      detail: "Schedule practice presenting forecasts to non-finance stakeholders.",
-      priority: "High",
-      href: "/ai/plans",
-    },
-  ],
-  Operations: [
-    {
-      action: "Close the Automation gap",
-      detail: "Prioritise automation learning for the operations team.",
-      priority: "Critical",
-      href: "/ai/plans",
-    },
-  ],
 };

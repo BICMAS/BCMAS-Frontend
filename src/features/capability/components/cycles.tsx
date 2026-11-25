@@ -351,7 +351,7 @@ function StatsTable({ title, rows }: { title: string; rows: Array<CycleStats & {
       <table className="mt-3 w-full text-left text-sm" aria-label={title}>
         <thead className="text-xs text-slate-500">
           <tr>
-            {["", "People", "Submitted", "Verified", "Remaining", "Avg. days to decide", "Self-rating minus verified", "Skills met", "Gaps closed"].map((h) => (
+            {["", "People", "Submitted", "Verified", "Remaining", "Avg. days to decide", "Self-rating minus verified", "Skills met", "Gaps closed", "Late decisions"].map((h) => (
               <th key={h || "name"} className="py-2 pr-4">
                 {h || <span className="sr-only">Name</span>}
               </th>
@@ -370,6 +370,7 @@ function StatsTable({ title, rows }: { title: string; rows: Array<CycleStats & {
               <td>{r.selfVsVerified === null ? "—" : `${r.selfVsVerified > 0 ? "+" : ""}${r.selfVsVerified}`}</td>
               <td>{r.skillsMetPct === null ? "—" : `${r.skillsMetPct}%`}</td>
               <td>{r.gapsClosed}</td>
+              <td>{r.lateDecisions}</td>
             </tr>
           ))}
         </tbody>

@@ -113,6 +113,7 @@ export function markForHumanReview(organisationId: string, id: string, reason: s
 export function completeHumanReview(organisationId: string, id: string, note: string, actor: string) {
   const app = find(organisationId, id);
   if (app.stage !== "human_review") throw new RecruitmentError("This candidate is not in human review.");
+  if (app.proposedOutcome) throw new RecruitmentError("Confirm the outcome, or refer it to the Hiring Manager.");
   const previous = [...app.stageHistory].reverse().find((h) => h.stage !== "human_review")?.stage ?? "new_application";
   moveTo(app, previous, actor, note.trim() || "Human review completed");
   recruitmentStore.save();

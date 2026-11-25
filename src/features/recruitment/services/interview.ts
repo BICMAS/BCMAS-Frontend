@@ -19,6 +19,7 @@ import { getAssessmentVersion } from "@/features/assessment-library/services/org
 
 import { cameraEmailNote, newCameraLog, requireCameraToStart } from "./camera";
 import { attemptFor, SCORING_RULE_VERSION } from "./delivery";
+import { proposeNotProgressed } from "./outcome-review";
 import { getVacancy, recruitmentStore, RecruitmentError } from "./vacancies";
 import type { Application, ApplicationStage, CameraPolicy, InterviewEvent, InterviewSession } from "../types";
 
@@ -416,7 +417,8 @@ export function confirmInterviewScores(
     reason,
     scoredAt: nowIso(),
   };
-  setStage(app, passed ? "qualified" : "not_progressed", "BCMS (approved threshold)", reason);
+  if (passed) setStage(app, "qualified", "BCMS (approved threshold)", reason);
+  else proposeNotProgressed(app, "interview", reason, "BCMS (approved threshold)");
   recruitmentStore.save();
 }
 

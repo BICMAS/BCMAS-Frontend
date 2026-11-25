@@ -20,6 +20,7 @@ import {
   shortlist,
 } from "../services/hiring-review";
 import { confirmInterviewScores, giveConsent, inviteToInterview, saveInterviewAnswer, startInterview, submitInterview } from "../services/interview";
+import { confirmNotProgressed } from "../services/outcome-review";
 import { listOutbox, resetRecruitment } from "../services/vacancies";
 
 // BCMS Talent Assessment guide, step 7b: Hiring Manager review and shortlisting.
@@ -81,6 +82,7 @@ async function buildPipeline() {
   submitInterview(token);
   confirmInterviewScores(GEC, "app-se-1", { q01: { score: 4 }, q02: { score: 3 }, q03: { score: 3 }, q04: { score: 2 } }, HRBP);
   takeAssessment("app-se-2", false, 1);
+  confirmNotProgressed(GEC, "app-se-2", "Checked by HR.", HRBP);
 }
 
 beforeEach(async () => {

@@ -5,6 +5,8 @@ import { useState } from "react";
 import { ChevronRightIcon, FileIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { addCapabilityEvidence, evidenceTargets } from "@/features/capability/services/capability";
+import { runCapability, useCapabilityUser } from "@/features/capability/use-capability";
 import { FileDropzone } from "@/components/shared/file-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +46,15 @@ export function ProgressTimelineView() {
   const [events, setEvents] = useState(() => listTimeline());
   const [goalId, setGoalId] = useState(goals[0]?.id ?? "");
   const [title, setTitle] = useState("");
+  const [workDate, setWorkDate] = useState("");
+  const user = useCapabilityUser();
+  const targets = user ? evidenceTargets(user) : [];
+  const target = targets.find((t) => `skill:${t.skillId}` === goalId);
   const [notes, setNotes] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [pending, setPending] = useState(false);
 
-  const canSubmit = !pending && title.trim().length > 0 && attachments.length > 0;
+  const canSubmit = !pending && title.trim().length > 0 && attachments.length > 0 && (!target || !!workDate);
 
   return (
     <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[70%_30%]">
@@ -65,13 +71,30 @@ export function ProgressTimelineView() {
             value={goalId}
             onChange={(event) => setGoalId(event.target.value)}
           >
-            {goals.map((goal) => (
-              <option key={goal.id} value={goal.id}>
-                {goal.title}
-              </option>
-            ))}
+            <optgroup label="Development goals">
+              {goals.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.title}
+                </option>
+              ))}
+            </optgroup>
+            {targets.length ? (
+              <optgroup label="My capability assessment">
+                {targets.map((t) => (
+                  <option key={t.skillId} value={`skill:${t.skillId}`}>
+                    {t.name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </select>
         </label>
+        {target ? (
+          <label className="mt-4 block text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+            When was the work done?
+            <Input type="date" className="mt-2 font-medium normal-case" value={workDate} onChange={(event) => setWorkDate(event.target.value)} />
+          </label>
+        ) : null}
         <label className="mt-4 block text-[10px] font-bold tracking-widest text-slate-400 uppercase">
           Evidence Title
           <Input
@@ -145,19 +168,30 @@ export function ProgressTimelineView() {
           disabled={!canSubmit}
           onClick={async () => {
             const goal = goals.find((item) => item.id === goalId);
-            if (!canSubmit || !goal) return;
+            if (!canSubmit || (!goal && !target)) return;
+            const fileNames = attachments.map((file) => file.name);
+            if (
+              user &&
+              target &&
+              !runCapability(() =>
+                addCapabilityEvidence(user, target.assessmentId, target.skillId, { title, notes, workDate, fileNames }),
+              )
+            ) {
+              return;
+            }
             setPending(true);
             try {
               await addEvidence({
                 title: title.trim(),
-                fileNames: attachments.map((file) => file.name),
-                linkedTo: goal.title,
+                fileNames,
+                linkedTo: target ? `${target.name} (capability assessment)` : goal!.title,
                 notes: notes.trim(),
               });
               setEvents(listTimeline());
               setTitle("");
               setAttachments([]);
               setNotes("");
+              setWorkDate("");
               toast.success("Evidence submitted for review");
             } finally {
               setPending(false);

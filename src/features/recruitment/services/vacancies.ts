@@ -154,6 +154,7 @@ function seed(): {
     cvAnalysis: null,
     extractionIssue: null,
     notes: [],
+    proposedOutcome: null,
     decisions: [],
     stageHistory: [{ stage: "new_application", at: at(offset), actor: "Candidate", note: "Applied through the public link" }],
   });
@@ -189,7 +190,7 @@ Diploma in Business Administration, 2022`,
 /* ── store ─────────────────────────────────────────────────────────────── */
 
 /** Bump the version when the stored shape changes, so older saved sample data is not misread. */
-const STORAGE_KEY = "bcms-recruitment-v6";
+const STORAGE_KEY = "bcms-recruitment-v7";
 let state: ReturnType<typeof seed> | null = null;
 let loaded = false;
 let revision = 0;
@@ -695,6 +696,7 @@ export function submitApplication(token: string, input: ApplicationInput): { ref
     cvAnalysis: null,
     extractionIssue: null,
     notes: [],
+    proposedOutcome: null,
     decisions: [],
     stageHistory: [{ stage: "new_application", at: now.toISOString(), actor: "Candidate", note: "Applied through the public link" }],
   };

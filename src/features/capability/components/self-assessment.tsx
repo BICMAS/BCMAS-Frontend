@@ -12,12 +12,13 @@ import { cn } from "@/lib/utils";
 import type { MockUser } from "@/types/user";
 
 import {
-  cycleOf,
   levelDescription,
   levelLabel,
   myAssessment,
   requestAdjustment,
   saveSelfRating,
+  selfAssessmentClosed,
+  selfAssessmentEnds,
   submitSelfAssessment,
 } from "../services/capability";
 import type { CapabilityAssessment } from "../types";
@@ -58,8 +59,9 @@ function SelfAssessment({ user, routeId }: { user: MockUser; routeId: string }) 
       </div>
     );
   }
+  if (selfAssessmentClosed(assessment)) return <Closed user={user} assessment={assessment} />;
   const item = assessment.items[index]!;
-  const cycle = cycleOf(assessment);
+  const ends = selfAssessmentEnds(assessment);
   const last = index === assessment.items.length - 1;
 
   return (
@@ -71,7 +73,7 @@ function SelfAssessment({ user, routeId }: { user: MockUser; routeId: string }) 
         <h1 className="mt-2 text-3xl font-bold text-navy">Let&apos;s assess your current Capabilities</h1>
         <p className="mt-3 max-w-2xl text-slate-500">
           Rate yourself against the {assessment.roleTitle} profile. It takes about <strong>10 minutes</strong>
-          {cycle?.endsOn ? `, and closes on ${formatDay(cycle.endsOn)}` : ""}.
+          {ends ? `, and closes at the end of ${formatDay(ends)}` : ""}.
         </p>
       </div>
       <details className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-600" open={index === 0}>
@@ -156,6 +158,7 @@ function Review({ user, routeId }: { user: MockUser; routeId: string }) {
   const router = useRouter();
   const assessment = myAssessment(user);
   if (!assessment) return <NoAssessment />;
+  if (selfAssessmentClosed(assessment)) return <Closed user={user} assessment={assessment} />;
   const submitted = !!assessment.submittedAt;
   const missing = assessment.items.filter((i) => i.self === null).length;
 
@@ -210,6 +213,20 @@ function Review({ user, routeId }: { user: MockUser; routeId: string }) {
           </Link>
         </div>
       )}
+      <Adjustments user={user} assessment={assessment} />
+    </div>
+  );
+}
+
+function Closed({ user, assessment }: { user: MockUser; assessment: CapabilityAssessment }) {
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="rounded-2xl border border-border-slate bg-white p-8">
+        <h1 className="text-xl font-bold text-navy">Self-assessment has closed</h1>
+        <p className="mt-2 text-sm text-slate-500">
+          Your ratings so far are saved. Ask {assessment.reviewer.name} or your Organisation Admin for an extension.
+        </p>
+      </div>
       <Adjustments user={user} assessment={assessment} />
     </div>
   );

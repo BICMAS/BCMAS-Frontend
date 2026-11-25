@@ -179,6 +179,13 @@ export type Application = {
   /** HR flagged a problem reading the CV (wrong text, scanned image, etc.). */
   extractionIssue: { note: string; by: string; at: string } | null;
   notes: HrNote[];
+  /** A below-pass-mark result waiting for a person to confirm it. */
+  proposedOutcome: {
+    stage: "assessment" | "interview";
+    reason: string;
+    at: string;
+    referral: { by: string; at: string; reason: string } | null;
+  } | null;
   /** Hiring Manager decisions, oldest first. */
   decisions: HmDecision[];
   stageHistory: StageChange[];
@@ -209,7 +216,7 @@ export type AttemptStatus = "invited" | "in_progress" | "submitted" | "expired";
 export type AttemptAnswer = { optionId?: string; text?: string; savedAt: string };
 
 export type AttemptEvent = {
-  type: "invited" | "resent" | "opened" | "started" | "resumed" | "autosaved" | "support_requested" | "time_expired" | "submitted";
+  type: "invited" | "resent" | "opened" | "started" | "resumed" | "autosaved" | "support_requested" | "extra_time" | "time_expired" | "submitted";
   at: string;
   note?: string;
 };
@@ -250,6 +257,8 @@ export type AssessmentAttempt = {
   assessmentVersion: string;
   assessmentName: string;
   durationMinutes: number;
+  /** Adjustments added to the time allowed. */
+  extraTime: Array<{ minutes: number; reason: string; by: string; at: string }>;
   thresholdSnapshotVersion: number;
   status: AttemptStatus;
   invitedAt: string;

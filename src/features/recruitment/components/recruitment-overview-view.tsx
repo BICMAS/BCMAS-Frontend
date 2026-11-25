@@ -43,7 +43,7 @@ function Overview({ organisationId }: { organisationId: string }) {
         { label: "Approved vacancies ready to publish", count: vacancies.filter((v) => v.status === "approved").length, href: "/talent/vacancies" },
         { label: "New applications to analyse", count: candidates.filter((c) => c.stage === "new_application").length, href: "/talent/candidates" },
         { label: "CV extraction issues", count: candidates.filter((c) => c.extractionIssue || !c.cvText).length, href: "/talent/candidates" },
-        { label: "Candidates in human review", count: candidates.filter((c) => c.stage === "human_review").length, href: "/talent/candidates" },
+        { label: "Candidates in human review (including outcomes to confirm)", count: candidates.filter((c) => c.stage === "human_review").length, href: "/talent/candidates" },
         { label: "Written answers to score", count: attempts.filter((a) => a?.score?.outcome === "awaiting_written_scoring").length, href: "/talent/candidates" },
         { label: "Interviews to score", count: interviews.filter((i) => i?.status === "submitted" && !i.score).length, href: "/talent/candidates" },
         {

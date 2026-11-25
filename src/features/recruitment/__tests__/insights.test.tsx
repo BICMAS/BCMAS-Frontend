@@ -12,6 +12,7 @@ import { inviteToAssessment, saveAnswer, scoreWrittenAnswer, startAssessment, su
 import { decide } from "../services/hiring-review";
 import { byVacancy, funnel, metrics, timeInStage } from "../services/insights";
 import { confirmInterviewScores, giveConsent, inviteToInterview, saveInterviewAnswer, startInterview, submitInterview } from "../services/interview";
+import { confirmNotProgressed } from "../services/outcome-review";
 import { resetRecruitment } from "../services/vacancies";
 
 // BCMS Talent Assessment guide, step 8: Recruitment Insights and the Talent Assessment overview.
@@ -67,6 +68,7 @@ function pipeline() {
   confirmInterviewScores(GEC, "app-se-1", { q01: { score: 4 }, q02: { score: 3 }, q03: { score: 3 }, q04: { score: 2 } }, HRBP);
   decide(GEC, "app-se-1", MICHAEL, "selected", "");
   takeAssessment("app-se-2", false, 1);
+  confirmNotProgressed(GEC, "app-se-2", "Checked by HR.", HRBP);
 }
 
 beforeEach(() => {

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { assessmentLink, hrAttemptView, scoreWrittenAnswer } from "../services/delivery";
 import { CameraLogPanel } from "./camera-log";
+import { ExtraTime } from "./outcome-and-time";
 import { formatDateTime, runAction } from "./recruitment-shared";
 
 const EVENT_LABEL: Record<string, string> = {
@@ -18,6 +19,7 @@ const EVENT_LABEL: Record<string, string> = {
   resumed: "Resumed",
   autosaved: "Autosaved",
   support_requested: "Support requested",
+  extra_time: "Extra time added",
   time_expired: "Time allowed ended",
   submitted: "Submitted",
 };
@@ -142,6 +144,8 @@ export function AssessmentResults({
           })}
         </section>
       ) : null}
+
+      <ExtraTime attempt={attempt} organisationId={organisationId} actor={actor} />
 
       <CameraLogPanel organisationId={organisationId} applicationId={applicationId} stage="assessment" actor={actor} record={attempt} />
 

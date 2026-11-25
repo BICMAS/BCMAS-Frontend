@@ -10,6 +10,8 @@
  *  - Objective items are scored with the fixed answer key. Written answers are scored by a person
  *    against the approved rubric. The result records the assessment version, scoring-rule version
  *    and threshold snapshot, and progression follows the approved threshold with a stated reason.
+ *    Below the threshold, HR confirms the outcome (outcome-review.ts).
+ *  - HR can add extra time as an adjustment, with a reason, until the candidate submits.
  *  - HR never sees or changes a candidate's answers before they submit.
  */
 import { getMockOrganisation } from "@/config/mock-users";
@@ -18,6 +20,7 @@ import { candidateView } from "@/features/assessment-library/services/versioning
 import type { TemplateVersion } from "@/features/assessment-library/types";
 
 import { cameraEmailNote, newCameraLog, requireCameraToStart } from "./camera";
+import { proposeNotProgressed } from "./outcome-review";
 import { getVacancy, recruitmentStore, RecruitmentError } from "./vacancies";
 import type {
   Application,
@@ -98,7 +101,7 @@ function email(attempt: AssessmentAttempt, app: Application, kind: "assessment_i
         : `Assessment received: ${vacancy?.title ?? ""} (${app.reference})`,
     body:
       kind === "assessment_invitation"
-        ? `Dear ${app.fullName},\n\nPlease complete the ${attempt.assessmentName} assessment (about ${attempt.durationMinutes} minutes) by ${expires}: ${link}\n\nThe link is personal to you and works once.${cameraEmailNote(attempt.camera.policy)}\n\n${org.name} Recruitment`
+        ? `Dear ${app.fullName},\n\nPlease complete the ${attempt.assessmentName} assessment (about ${allowedMinutes(attempt)} minutes) by ${expires}: ${link}\n\nThe link is personal to you and works once.${cameraEmailNote(attempt.camera.policy)}\n\n${org.name} Recruitment`
         : `Dear ${app.fullName},\n\nThank you. We have received your assessment and will email you about the next steps.\n\n${org.name} Recruitment`,
     kind,
     at: nowIso(),
@@ -141,6 +144,7 @@ export function inviteToAssessment(organisationId: string, applicationId: string
     assessmentVersion: ref.version,
     assessmentName: ref.name,
     durationMinutes: ref.durationMinutes,
+    extraTime: [],
     thresholdSnapshotVersion: snapshot.version,
     status: "invited",
     invitedAt: nowIso(),
@@ -179,6 +183,29 @@ export function resendInvitation(organisationId: string, applicationId: string, 
   return attempt.token;
 }
 
+export const MAX_EXTRA_MINUTES = 120;
+
+/** Time allowed, with any extra time. */
+export function allowedMinutes(attempt: AssessmentAttempt) {
+  return attempt.durationMinutes + attempt.extraTime.reduce((sum, x) => sum + x.minutes, 0);
+}
+
+/** Extra time as an adjustment, before or during the attempt. Never after submission. */
+export function grantExtraTime(organisationId: string, applicationId: string, minutes: number, reason: string, actor: string) {
+  const attempt = data().attempts.find((a) => a.applicationId === applicationId && a.organisationId === organisationId);
+  if (!attempt) throw new RecruitmentError("This candidate has not been invited yet.");
+  if (refresh(attempt)) recruitmentStore.save();
+  if (attempt.status === "submitted") throw new RecruitmentError("The candidate has already submitted the assessment.");
+  if (!Number.isInteger(minutes) || minutes < 1) throw new RecruitmentError("Enter the extra minutes as a whole number.");
+  if (allowedMinutes(attempt) - attempt.durationMinutes + minutes > MAX_EXTRA_MINUTES) {
+    throw new RecruitmentError(`Extra time cannot be more than ${MAX_EXTRA_MINUTES} minutes in total.`);
+  }
+  if (!reason.trim()) throw new RecruitmentError("Give a reason for the extra time.");
+  attempt.extraTime.push({ minutes, reason: reason.trim(), by: actor, at: nowIso() });
+  event(attempt, "extra_time", `${minutes} minutes by ${actor}`);
+  recruitmentStore.save();
+}
+
 /* ── Candidate side (no login; the token is the credential) ─────────── */
 
 function byToken(token: string) {
@@ -191,7 +218,7 @@ function byToken(token: string) {
 function refresh(attempt: AssessmentAttempt): boolean {
   if (attempt.status === "submitted") return false;
   if (attempt.status === "in_progress" && attempt.startedAt) {
-    const deadline = new Date(attempt.startedAt).getTime() + attempt.durationMinutes * 60_000;
+    const deadline = new Date(attempt.startedAt).getTime() + allowedMinutes(attempt) * 60_000;
     if (Date.now() >= deadline) {
       event(attempt, "time_expired");
       finishSubmission(attempt, "Time allowed ended; answers saved so far were submitted.");
@@ -233,14 +260,14 @@ export function getCandidateAssessment(token: string): CandidateAssessment | nul
   const org = getMockOrganisation(attempt.organisationId);
   const remaining =
     attempt.status === "in_progress" && attempt.startedAt
-      ? Math.max(0, Math.round((new Date(attempt.startedAt).getTime() + attempt.durationMinutes * 60_000 - Date.now()) / 1000))
+      ? Math.max(0, Math.round((new Date(attempt.startedAt).getTime() + allowedMinutes(attempt) * 60_000 - Date.now()) / 1000))
       : null;
   return {
     status: attempt.status,
     organisationName: org.name,
     vacancyTitle: vacancy?.title ?? "",
     assessmentName: attempt.assessmentName,
-    durationMinutes: attempt.durationMinutes,
+    durationMinutes: allowedMinutes(attempt),
     expiresAt: attempt.expiresAt,
     items: version ? candidateView(version).items : [],
     answers: structuredClone(attempt.answers),
@@ -384,7 +411,7 @@ function applyScore(attempt: AssessmentAttempt) {
     if (vacancy.stages.interview.enabled) setStage(app, "assessment_completed", system, `${result.reason} Ready for the AI-avatar interview.`);
     else setStage(app, "qualified", system, result.reason);
   } else {
-    setStage(app, "not_progressed", system, result.reason);
+    proposeNotProgressed(app, "assessment", result.reason, system);
   }
 }
 

@@ -48,6 +48,7 @@ import { HM_DECISION_LABEL, STAGE_LABEL } from "../types";
 import { AssessmentResults } from "./assessment-results";
 import { InterviewResults } from "./interview-results";
 import { StageBadge } from "./candidate-list-view";
+import { ProposedOutcome } from "./outcome-and-time";
 import { HrbpGate, formatDateTime, runAction, useRecruitmentRevision } from "./recruitment-shared";
 
 const STATUS: Record<CvEvidenceStatus, { label: string; variant: "success" | "warning" | "secondary" }> = {
@@ -207,7 +208,7 @@ function CandidateProfile({ candidateId, organisationId, actor }: { candidateId:
           <NotebookPenIcon aria-hidden />
           Add HR Note
         </Button>
-        {candidate.stage === "human_review" ? (
+        {candidate.proposedOutcome ? null : candidate.stage === "human_review" ? (
           <Button type="button" variant="secondary" onClick={() => setDialog("complete_review")}>
             <UserCheckIcon aria-hidden />
             Complete Human Review
@@ -224,6 +225,7 @@ function CandidateProfile({ candidateId, organisationId, actor }: { candidateId:
         </Button>
       </div>
       <AiInlineError error={analyse.error} />
+      <ProposedOutcome candidate={candidate} organisationId={organisationId} actor={actor} />
       {!candidate.cvText ? (
         <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning-soft-foreground">
           No text could be read from this CV (for example a scanned PDF). Use Flag Extraction Issue to record the problem
