@@ -138,7 +138,7 @@ const SCENARIOS: CoachScenario[] = [
     difficulty: "advanced",
     estimated_minutes: 15,
     target_skills: [{ skill_id: "skl-api-gov", skill_name: "API Governance", target_level: 4, level_label: "Advanced" }],
-    persona: { name: "Dana Okafor", role: "Chief Privacy Officer", avatar_url: null },
+    persona: { name: "Dana Okafor", role: "Chief Privacy Officer", avatar_url: "/coach/amara.jpg" },
     opening: "I've read the proposal. How long will customer data exposed through the partner API be kept?",
     status: "published",
     updated_at: now(),

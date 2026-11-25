@@ -38,7 +38,7 @@ export function trendPoints(sessions: CoachSessionSummary[]) {
 export function CoachWelcome({ firstName }: { firstName?: string }) {
   return (
     <section className="flex flex-col items-center gap-4 rounded-2xl border border-border-slate bg-white p-6 shadow-sm sm:flex-row">
-      <CoachAvatar name={AI_COACH.name} size={72} />
+      <CoachAvatar name={AI_COACH.name} imageUrl={AI_COACH.imageUrl} size={72} />
       <div className="text-center sm:text-left">
         <p className="text-lg font-bold text-navy">
           Hi{firstName ? ` ${firstName}` : ""}, I&apos;m {AI_COACH.name}.
@@ -295,7 +295,7 @@ export function CoachingInsightsPanel() {
                   className="rounded-2xl border border-border-slate bg-white p-6 shadow-sm"
                 >
                   <div className="flex items-start gap-3">
-                    <CoachAvatar name={AI_COACH.name} size={36} />
+                    <CoachAvatar name={AI_COACH.name} imageUrl={AI_COACH.imageUrl} size={36} />
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-navy">
                         {conversation.topic ?? `${conversation.mode.replace(/_/g, " ")} coaching`}

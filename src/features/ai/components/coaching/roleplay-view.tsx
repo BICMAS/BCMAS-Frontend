@@ -13,9 +13,11 @@ import { newClientId } from "../../api";
 import { useAiAction, useAiQuery } from "../../hooks/use-ai-query";
 import { ChatComposer, ChatThread } from "../shared/chat";
 import { AiDataRegion, AiDisclaimer, AiInlineError, StatusBadge } from "../shared/ai-states";
-import { CoachAvatar } from "./coach-avatar";
+import { AI_COACH, CoachAvatar } from "./coach-avatar";
 import { CoachStage, type CoachPresence } from "./coach-stage";
 import { useCoachSpeech } from "./coach-voice";
+import { useVideoCoach } from "./use-video-coach";
+import { VideoCoachPanel } from "./video-coach-panel";
 
 export function RoleplayView({ sessionId }: { sessionId: string }) {
   const session = useAiQuery((c) => c.getSession(sessionId), [sessionId]);
@@ -42,29 +44,44 @@ function RoleplayPanel({ initial, onChange }: { initial: CoachSession; onChange:
   const active = initial.status === "active";
   const speech = useCoachSpeech({ pitch: 0.95 });
   const [listening, setListening] = useState(false);
+  const video = useVideoCoach();
+  // There is one video face, so only characters who share its portrait can appear on video.
+  const hasVideo = video.available && initial.persona.avatar_url === AI_COACH.imageUrl;
+  const videoOn = video.status === "on";
+  const { interrupt: interruptVideo, speak: speakOnVideo, stop: stopVideo } = video;
   const stopSpeech = speech.stop;
+  const stopTalking = useCallback(() => {
+    stopSpeech();
+    interruptVideo();
+  }, [stopSpeech, interruptVideo]);
   const onListeningChange = useCallback(
     (on: boolean) => {
       setListening(on);
-      if (on) stopSpeech();
+      if (on) stopTalking();
     },
-    [stopSpeech],
+    [stopTalking],
   );
   const presence: CoachPresence = listening
     ? "listening"
     : send.pending && !streaming
       ? "thinking"
-      : speech.speaking || (send.pending && streaming)
+      : speech.speaking || video.speaking || (send.pending && streaming)
         ? "speaking"
         : "ready";
 
+  /** On video when it is running; otherwise in the browser's voice. */
+  async function say(text: string, always = false) {
+    if (videoOn && (await speakOnVideo(text))) return;
+    if (always || speech.enabled) speech.speak(text);
+  }
+
   async function onSend(text: string) {
-    speech.stop();
+    stopTalking();
     setStreaming("");
     const result = await send.run(text);
     setStreaming(null);
     if (!result) return false;
-    if (speech.enabled) speech.speak(result.coach_message.text);
+    void say(result.coach_message.text);
     setRemaining(result.remaining_s);
     setSuggestEnd(result.suggest_end);
     onChange({ ...initial, messages: [...initial.messages, result.user_message, result.coach_message], status: result.session_status });
@@ -74,6 +91,7 @@ function RoleplayPanel({ initial, onChange }: { initial: CoachSession; onChange:
   async function onEnd() {
     const result = await end.run();
     if (result) {
+      stopVideo();
       evaluation.setData(result);
       onChange({ ...initial, status: "evaluated", evaluation_status: "ready" });
     }
@@ -119,6 +137,18 @@ function RoleplayPanel({ initial, onChange }: { initial: CoachSession; onChange:
         presence={presence}
         voice={speech}
       />
+      {hasVideo && active ? (
+        <VideoCoachPanel
+          name={initial.persona.name}
+          voice={video.voice}
+          status={video.status}
+          error={video.error}
+          videoRef={video.videoRef}
+          audioRef={video.audioRef}
+          start={video.start}
+          stop={video.stop}
+        />
+      ) : null}
       <ChatThread
         messages={initial.messages}
         streaming={streaming}
@@ -126,7 +156,7 @@ function RoleplayPanel({ initial, onChange }: { initial: CoachSession; onChange:
         assistantAvatar={
           <CoachAvatar name={initial.persona.name} imageUrl={initial.persona.avatar_url} size={32} />
         }
-        onListen={speech.supported ? speech.speak : undefined}
+        onListen={speech.supported || videoOn ? (text) => void say(text, true) : undefined}
       />
       {suggestEnd && active ? (
         <p className="rounded-lg bg-info-soft px-3 py-2 text-sm text-info-soft-foreground">

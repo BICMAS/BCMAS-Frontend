@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { AiApiError } from "../api";
+import { AI_COACH } from "../components/coaching/coach-avatar";
 import { visemesForWord, wordAt } from "../components/coaching/coach-voice";
 import { CoachingHubView } from "../components/coaching/coaching-hub-view";
 import { ConversationView } from "../components/coaching/conversation-view";
@@ -154,8 +155,11 @@ describe("Avatar lip sync", () => {
     expect(wordAt("What would success look like?", 11)).toBe("success");
   });
 
-  it("moves the coach's mouth in time with each spoken word", async () => {
+  it("moves a drawn portrait's mouth in time with each spoken word", async () => {
     const user = userEvent.setup();
+    // Role-play characters and the interviewer are drawn; the coach has a photo.
+    const photo = AI_COACH.imageUrl;
+    Object.assign(AI_COACH, { imageUrl: null });
     let current: {
       text: string;
       onstart: (() => void) | null;
@@ -204,6 +208,7 @@ describe("Avatar lip sync", () => {
       expect(stage()).toBeNull();
       expect(screen.getByText("Ready when you are")).toBeTruthy();
     } finally {
+      Object.assign(AI_COACH, { imageUrl: photo });
       vi.unstubAllGlobals();
     }
   });

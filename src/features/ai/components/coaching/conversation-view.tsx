@@ -15,6 +15,8 @@ import { AiDataRegion, AiDisclaimer, AiInlineError, StatusBadge } from "../share
 import { AI_COACH, CoachAvatar } from "./coach-avatar";
 import { CoachStage, type CoachPresence } from "./coach-stage";
 import { useCoachSpeech } from "./coach-voice";
+import { useVideoCoach } from "./use-video-coach";
+import { VideoCoachPanel } from "./video-coach-panel";
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
   const conversation = useAiQuery((c) => c.getConversation(conversationId), [conversationId]);
@@ -48,29 +50,42 @@ function ConversationPanel({
   const ended = initial.status === "ended";
   const speech = useCoachSpeech();
   const [listening, setListening] = useState(false);
+  const video = useVideoCoach();
+  const videoOn = video.status === "on";
+  const { interrupt: interruptVideo, speak: speakOnVideo, stop: stopVideo } = video;
   const stopSpeech = speech.stop;
+  const stopTalking = useCallback(() => {
+    stopSpeech();
+    interruptVideo();
+  }, [stopSpeech, interruptVideo]);
   const onListeningChange = useCallback(
     (on: boolean) => {
       setListening(on);
-      if (on) stopSpeech(); // the coach stops talking when the employee starts
+      if (on) stopTalking(); // the coach stops talking when the employee starts
     },
-    [stopSpeech],
+    [stopTalking],
   );
   const presence: CoachPresence = listening
     ? "listening"
     : send.pending && !streaming
       ? "thinking"
-      : speech.speaking || (send.pending && streaming)
+      : speech.speaking || video.speaking || (send.pending && streaming)
         ? "speaking"
         : "ready";
 
+  /** On video when it is running; otherwise in the browser's voice. */
+  async function say(text: string, always = false) {
+    if (videoOn && (await speakOnVideo(text))) return;
+    if (always || speech.enabled) speech.speak(text);
+  }
+
   async function onSend(text: string) {
-    speech.stop();
+    stopTalking();
     setStreaming("");
     const result = await send.run(text);
     setStreaming(null);
     if (!result) return false;
-    if (speech.enabled) speech.speak(result.assistant_message.text);
+    void say(result.assistant_message.text);
     setLastTurn(result);
     onChange({
       ...initial,
@@ -85,6 +100,7 @@ function ConversationPanel({
   async function onEnd() {
     const result = await end.run();
     if (result) {
+      stopVideo();
       summary.setData(result);
       onChange({ ...initial, status: "ended", has_summary: true });
     }
@@ -111,13 +127,25 @@ function ConversationPanel({
           </>
         }
       />
-      <CoachStage name={AI_COACH.name} role={AI_COACH.role} presence={presence} voice={speech} />
+      <CoachStage name={AI_COACH.name} role={AI_COACH.role} imageUrl={AI_COACH.imageUrl} presence={presence} voice={speech} />
+      {video.available && !ended ? (
+        <VideoCoachPanel
+          name={AI_COACH.name}
+          voice={video.voice}
+          status={video.status}
+          error={video.error}
+          videoRef={video.videoRef}
+          audioRef={video.audioRef}
+          start={video.start}
+          stop={video.stop}
+        />
+      ) : null}
       <ChatThread
         messages={initial.messages}
         streaming={streaming}
         assistantLabel={AI_COACH.name}
-        assistantAvatar={<CoachAvatar name={AI_COACH.name} size={32} />}
-        onListen={speech.supported ? speech.speak : undefined}
+        assistantAvatar={<CoachAvatar name={AI_COACH.name} imageUrl={AI_COACH.imageUrl} size={32} />}
+        onListen={speech.supported || videoOn ? (text) => void say(text, true) : undefined}
       />
       {lastTurn && !ended ? (
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">

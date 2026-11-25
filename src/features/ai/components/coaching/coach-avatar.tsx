@@ -10,6 +10,8 @@ import type { Viseme } from "./coach-voice";
 export const AI_COACH = {
   name: "Amara",
   role: "Your AI development coach",
+  /** A still of the video coach's face. Replace it when SIMLI_FACE_ID changes. */
+  imageUrl: "/coach/amara.jpg",
 } as const;
 
 const SKIN = ["#8d5524", "#c68642", "#e0ac69", "#f1c27d", "#a0662f", "#6b4423"];
