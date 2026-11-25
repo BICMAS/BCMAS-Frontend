@@ -13,13 +13,17 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getNavigationConfig } from "@/config/navigation";
+import { organisationName, signedInAccount } from "@/features/accounts/services/accounts";
+import { useAccountsRevision } from "@/features/accounts/use-accounts";
 import {
   mockSelectWorkspace,
   mockWorkspaces,
   provisionedWorkspaces,
   type ProvisionedWorkspace,
 } from "@/features/authentication/services/mock-auth";
-import { platformRevision, subscribePlatform } from "@/features/platform/services/mock-platform";
+import { platformRevision, subscribePlatform, tenantForOrganisation } from "@/features/platform/services/mock-platform";
+import { getMockUser } from "@/config/mock-users";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/session-store";
 
@@ -31,9 +35,23 @@ export function WorkspaceSelectionView() {
   const provisioned = platform === -1 ? [] : provisionedWorkspaces();
   const setUserId = useSessionStore((s) => s.setUserId);
 
+  const accounts = useAccountsRevision();
+  const account = accounts === -1 ? null : signedInAccount();
+
+  const onSelectOwn = (id: string) => {
+    if (signedInAccount()?.status !== "Active") {
+      toast.error("This account cannot sign in");
+      router.push("/login");
+      return;
+    }
+    setUserId(id);
+    toast.success("Workspace selected");
+    router.push(getNavigationConfig(getMockUser(id).portal).defaultHref);
+  };
+
   const onSelectProvisioned = (workspace: ProvisionedWorkspace) => {
     if (!workspace.ready) {
-      toast.message(`${workspace.name} is still provisioning`, { description: "Try again in a minute." });
+      toast.message(`${workspace.name} is not ready`, { description: `${workspace.meta}.` });
       return;
     }
     setUserId(workspace.adminUserId);
@@ -56,6 +74,31 @@ export function WorkspaceSelectionView() {
       setLoadingId(null);
     }
   };
+
+  if (account) {
+    const tenant = tenantForOrganisation(account.organisationId);
+    const provisioning = tenant?.status === "Provisioning";
+    return (
+      <div className="w-full max-w-md space-y-6 text-center">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">Welcome, {account.name}</h1>
+        <button
+          type="button"
+          aria-disabled={provisioning}
+          onClick={() => {
+            if (provisioning) toast.message("This workspace is still provisioning", { description: "Try again in a minute." });
+            else onSelectOwn(account.id);
+          }}
+          className="group flex w-full items-center justify-between rounded-2xl border border-border-slate bg-white p-6 text-left shadow-sm hover:border-green-lime"
+        >
+          <span>
+            <span className="block text-lg font-bold text-navy">{organisationName(account.organisationId)}</span>
+            <span className="block text-xs text-slate-500">{provisioning ? "Provisioning…" : account.accessRole}</span>
+          </span>
+          <ArrowRightIcon className="size-4 text-slate-400" aria-hidden />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-2xl">
@@ -138,7 +181,7 @@ export function WorkspaceSelectionView() {
           >
             <div className="absolute top-0 right-0 p-3">
               <Badge className="rounded bg-slate-100 text-[10px] font-bold tracking-wider text-slate-600 uppercase">
-                {workspace.ready ? "New" : "Provisioning"}
+                {workspace.ready ? "New" : "Not ready"}
               </Badge>
             </div>
             <div className="mb-4 flex items-center gap-4">

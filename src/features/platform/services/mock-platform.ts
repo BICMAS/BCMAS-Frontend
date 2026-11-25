@@ -1,10 +1,11 @@
 import { allOrganisations, allUsers } from "@/config/mock-users";
 import { registerProvisionedTenant } from "@/config/provisioned-tenants";
+import { accountById, createFirstAdmin, emailHasAccount, subscribeAccounts, type Setup, type SetupMethod } from "@/features/accounts/services/accounts";
 import { initialsAvatar } from "@/features/employees/components/workforce-change-dialogs";
 import { mockLatency } from "@/lib/mock/delay";
 import type { MockUser } from "@/types/user";
 
-export type TenantStatus = "Active" | "MFA Pending" | "Provisioning" | "Suspended";
+export type TenantStatus = "Active" | "MFA Pending" | "Provisioning" | "Awaiting Admin" | "Suspended";
 export type TenantPlan = "Enterprise Plus" | "Standard" | "Pilot / Trial";
 export type TicketStatus = "Open" | "Assigned" | "Resolved";
 export type TicketPriority = "High" | "Medium" | "Low";
@@ -103,6 +104,8 @@ export type ProvisionDraft = {
   entitlements: string[];
   adminName: string;
   adminEmail: string;
+  /** How this customer's people set up their accounts. */
+  setupMethod?: SetupMethod;
 };
 
 const ALEX_AVATAR =
@@ -227,8 +230,13 @@ function emit() {
 
 export function subscribePlatform(onStoreChange: () => void) {
   listeners.add(onStoreChange);
+  // An activated first admin makes a waiting tenant Active.
+  const stopAccounts = subscribeAccounts(() => {
+    if (settle()) emit();
+  });
   return () => {
     listeners.delete(onStoreChange);
+    stopAccounts();
   };
 }
 
@@ -249,30 +257,70 @@ export function resetPlatform() {
 
 /* ── provisioning completion ───────────────────────────────────────────── */
 
-/** Marks tenants whose provisioning time has passed as Active. Returns true when any changed. */
+/** A provisioned tenant's first admin has set up their account. */
+function adminReady(tenant: TenantRecord) {
+  const account = tenant.adminUserId ? accountById(tenant.adminUserId) : null;
+  return !account || !["Invited", "Code expired"].includes(account.status);
+}
+
+/**
+ * Moves tenants on when provisioning time has passed: to Active, or to Awaiting Admin until the first
+ * admin has activated their account. Returns true when any changed.
+ */
 function settle(): boolean {
   const data = db();
   let changed = false;
   for (const tenant of data.tenants) {
+    if (tenant.status === "Awaiting Admin" && adminReady(tenant)) {
+      tenant.status = "Active";
+      changed = true;
+      auditCompletion(tenant, new Date(), `${tenant.name} is active: the first admin has set up their account`);
+      continue;
+    }
     if (tenant.status !== "Provisioning" || !tenant.provisioningCompletesAt) continue;
     const done = new Date(tenant.provisioningCompletesAt);
     if (done.getTime() > Date.now()) continue;
-    tenant.status = "Active";
+    const ready = adminReady(tenant);
+    tenant.status = ready ? "Active" : "Awaiting Admin";
     changed = true;
-    data.sequence += 1;
-    data.audits.unshift({
-      id: `audit-${data.sequence}`,
-      at: stamp(done),
-      adminName: tenant.provisionedBy ?? "BICMAS Platform",
-      adminAvatar: avatarFor(tenant.provisionedBy ?? ""),
-      category: "Provisioning",
-      tenantExternalId: tenant.externalId,
-      summary: `Provisioning completed: ${tenant.name} is active`,
-      sessionId: nextSessionId(),
-    });
+    auditCompletion(tenant, done, `Provisioning completed: ${tenant.name} is ${ready ? "active" : "waiting for its first admin"}`);
   }
   if (changed) persist();
   return changed;
+}
+
+function auditCompletion(tenant: TenantRecord, at: Date, summary: string) {
+  const data = db();
+  data.sequence += 1;
+  data.audits.unshift({
+    id: `audit-${data.sequence}`,
+    at: stamp(at),
+    adminName: tenant.provisionedBy ?? "BICMAS Platform",
+    adminAvatar: avatarFor(tenant.provisionedBy ?? ""),
+    category: "Provisioning",
+    tenantExternalId: tenant.externalId,
+    summary,
+    sessionId: nextSessionId(),
+  });
+}
+
+/** Records an action on a tenant's first admin account. Never includes a code. */
+export function auditFirstAdmin(tenantId: string, actorName: string, summary: string) {
+  const data = db();
+  const tenant = data.tenants.find((item) => item.id === tenantId);
+  if (!tenant) return;
+  data.sequence += 1;
+  data.audits.unshift({
+    id: `audit-${data.sequence}`,
+    at: stamp(),
+    adminName: actorName,
+    adminAvatar: avatarFor(actorName),
+    category: "Security",
+    tenantExternalId: tenant.externalId,
+    summary,
+    sessionId: nextSessionId(),
+  });
+  emit();
 }
 
 function scheduleCompletion(tenant: TenantRecord) {
@@ -397,7 +445,8 @@ export async function discardProvisioningDraft() {
   emit();
 }
 
-export async function provisionTenant(input: ProvisionDraft, actorName: string) {
+/** The returned `setup` holds the first admin's activation code. It is shown once and never stored. */
+export async function provisionTenant(input: ProvisionDraft, actorName: string): Promise<TenantRecord & { setup: Setup }> {
   await mockLatency(400);
   const data = db();
   const slug = input.slug.trim().toLowerCase();
@@ -406,7 +455,7 @@ export async function provisionTenant(input: ProvisionDraft, actorName: string) 
     throw new Error("That tenant URL is already in use");
   }
   const adminEmail = input.adminEmail.trim().toLowerCase();
-  if (allUsers().some((user) => user.email.toLowerCase() === adminEmail)) {
+  if (emailHasAccount(adminEmail) || allUsers().some((user) => user.email.toLowerCase() === adminEmail)) {
     throw new Error("That admin email already has a BICMAS account");
   }
   data.sequence += 1;
@@ -444,6 +493,7 @@ export async function provisionTenant(input: ProvisionDraft, actorName: string) 
     provisioningCompletesAt: new Date(now.getTime() + PROVISIONING_SECONDS * 1000).toISOString(),
     provisionedBy: actorName,
   };
+  const setup = await createFirstAdmin({ user: admin, method: input.setupMethod ?? "code", actorName });
   registerProvisionedTenant({ id: organisationId, name: record.name, shortName: code }, admin);
   data.tenants = [record, ...data.tenants];
   data.draft = null;
@@ -462,7 +512,7 @@ export async function provisionTenant(input: ProvisionDraft, actorName: string) 
   ];
   scheduleCompletion(record);
   emit();
-  return { ...record, entitlements: [...record.entitlements] };
+  return { ...record, entitlements: [...record.entitlements], setup };
 }
 
 export async function updateTenantEntitlements(

@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FirstAdminDialog } from "@/features/platform/components/first-admin-dialog";
 import { PlatformGate } from "@/features/platform/components/platform-gate";
 import {
   entitlementOptions,
@@ -37,7 +38,7 @@ const selectClass =
 
 function statusVariant(status: TenantStatus) {
   if (status === "Active") return "success" as const;
-  if (status === "Provisioning") return "info" as const;
+  if (status === "Provisioning" || status === "Awaiting Admin") return "info" as const;
   if (status === "Suspended") return "error" as const;
   return "warning" as const;
 }
@@ -64,6 +65,7 @@ export function TenantDirectoryView() {
     },
   });
   const [editing, setEditing] = useState<TenantRecord | null>(null);
+  const [adminOf, setAdminOf] = useState<TenantRecord | null>(null);
   const [flags, setFlags] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
 
@@ -142,6 +144,11 @@ export function TenantDirectoryView() {
           >
             Entitlements
           </button>
+          {row.adminUserId ? (
+            <button type="button" className="text-[10px] font-bold tracking-wide text-navy uppercase" onClick={() => setAdminOf(row)}>
+              First admin
+            </button>
+          ) : null}
           <Link
             href={`/platform/audit?tenant=${row.externalId}&category=Provisioning`}
             className="text-[10px] font-bold tracking-wide text-navy uppercase"
@@ -197,6 +204,7 @@ export function TenantDirectoryView() {
           <option value="all">Status: All</option>
           <option value="Active">Active</option>
           <option value="Provisioning">Provisioning</option>
+          <option value="Awaiting Admin">Awaiting Admin</option>
           <option value="MFA Pending">MFA Pending</option>
           <option value="Suspended">Suspended</option>
         </select>
@@ -215,6 +223,8 @@ export function TenantDirectoryView() {
         totalLabel={`${list.total} tenants`}
         emptyMessage="No tenants match this search."
       />
+
+      {adminOf ? <FirstAdminDialog tenant={adminOf} onClose={() => setAdminOf(null)} /> : null}
 
       <Dialog open={editing != null} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>

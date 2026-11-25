@@ -1,3 +1,4 @@
+import { checkPassword, LOCK_MINUTES, MAX_ATTEMPTS, signInWithCompany } from "@/features/accounts/services/accounts";
 import { listTenants } from "@/features/platform/services/mock-platform";
 import { sleep } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ const DEMO_PASSWORD = "Password123!";
  * Special emails:
  * - locked@example.com → account locked
  * - wrong password → error
+ * - an email with an account → that person's own password (the demo one until they change it)
  * - any other valid form → MFA then workspaces
  */
 export async function mockSignIn(input: {
@@ -32,11 +34,16 @@ export async function mockSignIn(input: {
     };
   }
 
-  if (input.password !== DEMO_PASSWORD) {
+  const check = await checkPassword(email, input.password);
+  if (check === "locked") {
     return {
-      status: "error",
-      message: "Invalid email or password. Demo password: Password123!",
+      status: "locked",
+      redirectTo: "/account-locked",
+      message: `Account locked for ${LOCK_MINUTES} minutes after ${MAX_ATTEMPTS} failed attempts.`,
     };
+  }
+  if (check === "wrong" || (check === "unknown" && input.password !== DEMO_PASSWORD)) {
+    return { status: "error", message: "Invalid email or password." };
   }
 
   return {
@@ -46,30 +53,16 @@ export async function mockSignIn(input: {
   };
 }
 
-export async function mockMicrosoftSignIn(): Promise<MockAuthResult> {
+/** Sample data: the email typed on the sign-in page stands in for the Microsoft account. */
+export async function mockMicrosoftSignIn(email = ""): Promise<MockAuthResult> {
   await sleep(700);
+  if (signInWithCompany(email) === "refused") {
+    return { status: "error", message: "Company sign-in is not available for this account." };
+  }
   return {
     status: "mfa_required",
     redirectTo: "/mfa",
     message: "Microsoft SSO succeeded. Complete MFA to continue.",
-  };
-}
-
-export async function mockForgotPassword(email: string): Promise<MockAuthResult> {
-  await sleep(800);
-  return {
-    status: "success",
-    redirectTo: "/forgot-password",
-    message: `If an account exists for ${email}, you will receive a reset link shortly.`,
-  };
-}
-
-export async function mockResetPassword(): Promise<MockAuthResult> {
-  await sleep(900);
-  return {
-    status: "success",
-    redirectTo: "/login",
-    message: "Password updated. You can sign in with your new password.",
   };
 }
 
@@ -96,33 +89,6 @@ export async function mockResendMfaCode(): Promise<MockAuthResult> {
     status: "success",
     redirectTo: "/mfa",
     message: "A new code has been sent to your authenticator app.",
-  };
-}
-
-export async function mockActivateAccount(): Promise<MockAuthResult> {
-  await sleep(1000);
-  return {
-    status: "success",
-    redirectTo: "/workspaces",
-    message: "Account activated. Select a workspace to continue.",
-  };
-}
-
-export async function mockAcceptInvite(): Promise<MockAuthResult> {
-  await sleep(700);
-  return {
-    status: "success",
-    redirectTo: "/activate",
-    message: "Invitation accepted. Complete your profile.",
-  };
-}
-
-export async function mockDeclineInvite(): Promise<MockAuthResult> {
-  await sleep(500);
-  return {
-    status: "success",
-    redirectTo: "/login",
-    message: "Invitation declined.",
   };
 }
 
@@ -202,7 +168,7 @@ export function provisionedWorkspaces(): ProvisionedWorkspace[] {
       initials: tenant.code.slice(0, 2),
       name: tenant.name,
       role: "Organisation Admin",
-      meta: tenant.status === "Active" ? `${tenant.plan} · new tenant` : "Provisioning…",
+      meta: tenant.status === "Active" ? `${tenant.plan} · new tenant` : tenant.status === "Awaiting Admin" ? "Awaiting account activation" : "Provisioning…",
       ready: tenant.status === "Active",
       adminUserId: tenant.adminUserId!,
     }));

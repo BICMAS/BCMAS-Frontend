@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { RoutePlaceholder } from "@/components/shared/route-placeholder";
+import { UserManagementView } from "@/features/accounts";
 
 export const metadata: Metadata = {
   title: "User Management",
 };
 
 export default function Page() {
-  return <RoutePlaceholder title="User Management" />;
+  return <UserManagementView />;
 }

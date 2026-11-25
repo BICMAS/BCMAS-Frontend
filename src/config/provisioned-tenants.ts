@@ -55,3 +55,14 @@ export function resetProvisionedTenants() {
     /* ignore */
   }
 }
+
+/** Adds or updates one person (an activated account). */
+export function registerProvisionedUser(user: MockUser) {
+  const current = read();
+  registry = { ...current, users: [...current.users.filter((u) => u.id !== user.id), user] };
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(registry));
+  } catch {
+    /* Storage unavailable: kept for this page only. */
+  }
+}

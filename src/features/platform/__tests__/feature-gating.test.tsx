@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { resetProvisionedTenants } from "@/config/provisioned-tenants";
+import { resetAccounts } from "@/features/accounts/services/accounts";
 import { featureForPath, getNavigationConfig, navigationByPortal } from "@/config/navigation";
 import type { NavItem, NavigationConfig } from "@/types/navigation";
 
@@ -44,6 +45,7 @@ function hrefs(config: NavigationConfig) {
 beforeEach(() => {
   resetPlatform();
   resetProvisionedTenants();
+  resetAccounts();
   session.userId = "user-sarah";
   session.organisationId = "org-gec";
   nav.pathname = "/org";

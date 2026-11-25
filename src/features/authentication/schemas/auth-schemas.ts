@@ -5,6 +5,22 @@ const emailField = z
   .min(1, "Work email is required")
   .email("Enter a valid work email");
 
+/** The backend must also refuse passwords known from leaks. */
+const newPassword = z
+  .string()
+  .min(12, "At least 12 characters long")
+  .regex(/[a-z]/, "Include a lowercase letter")
+  .regex(/[A-Z]/, "Include an uppercase letter")
+  .regex(/[^A-Za-z0-9]/, "Include at least one symbol (!@#$%)")
+  .refine((text) => !/password|bicmas/i.test(text), "Choose something harder to guess");
+
+const sixDigits = z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code");
+
+export const activationCodeSchema = z.object({
+  email: emailField,
+  code: z.string().refine((text) => text.replace(/[^A-Za-z0-9]/g, "").length === 12, "Enter the 12-character code"),
+});
+
 export const loginSchema = z.object({
   email: emailField,
   password: z.string().min(1, "Password is required"),
@@ -17,12 +33,9 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z
   .object({
-    password: z
-      .string()
-      .min(12, "At least 12 characters long")
-      .regex(/[a-z]/, "Include a lowercase letter")
-      .regex(/[A-Z]/, "Include an uppercase letter")
-      .regex(/[^A-Za-z0-9]/, "Include at least one symbol (!@#$%)"),
+    emailCode: sixDigits,
+    mfaCode: sixDigits,
+    password: newPassword,
     confirmPassword: z.string().min(1, "Confirm your password"),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -39,15 +52,8 @@ export const mfaSchema = z.object({
 
 export const activateAccountSchema = z
   .object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    jobTitle: z.string().min(1, "Job title is required"),
-    password: z
-      .string()
-      .min(12, "At least 12 characters long")
-      .regex(/[a-z]/, "Include a lowercase letter")
-      .regex(/[A-Z]/, "Include an uppercase letter")
-      .regex(/[^A-Za-z0-9]/, "Include at least one symbol (!@#$%)"),
+    emailCode: sixDigits,
+    password: newPassword,
     confirmPassword: z.string().min(1, "Confirm your password"),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -60,3 +66,4 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type MfaInput = z.infer<typeof mfaSchema>;
 export type ActivateAccountInput = z.infer<typeof activateAccountSchema>;
+export type ActivationCodeInput = z.infer<typeof activationCodeSchema>;

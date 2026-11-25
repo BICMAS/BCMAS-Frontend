@@ -63,7 +63,7 @@ export function LoginForm() {
   const onMicrosoft = async () => {
     setSsoLoading(true);
     try {
-      const result = await mockMicrosoftSignIn();
+      const result = await mockMicrosoftSignIn(form.getValues("email"));
       if (result.status === "error") {
         toast.error(result.message);
         return;
@@ -173,6 +173,12 @@ export function LoginForm() {
             )}
           </Button>
         </form>
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Have an activation code?{" "}
+          <Link href="/activate" className="font-bold text-green-deep hover:underline">
+            Activate account
+          </Link>
+        </p>
       </div>
     </AuthCard>
   );

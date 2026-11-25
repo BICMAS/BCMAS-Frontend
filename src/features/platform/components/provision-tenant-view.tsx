@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getMockUser } from "@/config/mock-users";
+import { SetupDetails } from "@/features/accounts/components/setup-details";
+import { SETUP_METHOD_HINT, SETUP_METHOD_LABEL, setupMethods, type Setup } from "@/features/accounts/services/accounts";
 import { PlatformGate } from "@/features/platform/components/platform-gate";
 import {
   ENTITLEMENT_DESCRIPTION,
@@ -41,6 +43,7 @@ const schema = z.object({
   entitlements: z.array(z.string()).min(1, "Choose at least one feature"),
   adminName: z.string().trim().min(2, "Enter the admin name"),
   adminEmail: z.string().trim().email("Enter a valid admin email"),
+  setupMethod: z.enum(setupMethods),
 });
 
 type ProvisionInput = z.infer<typeof schema>;
@@ -55,6 +58,7 @@ const emptyDraft: ProvisionInput = {
   entitlements: [...PLAN_ENTITLEMENTS["Enterprise Plus"]],
   adminName: "",
   adminEmail: "",
+  setupMethod: "code",
 };
 
 export function ProvisionTenantView() {
@@ -62,14 +66,16 @@ export function ProvisionTenantView() {
   const actor = useSessionStore((state) => state.user.name);
   const form = useForm<ProvisionInput>({
     resolver: zodResolver(schema),
-    defaultValues: getProvisioningDraft() ?? emptyDraft,
+    defaultValues: { ...emptyDraft, ...getProvisioningDraft() },
   });
   const [pending, setPending] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [setup, setSetup] = useState<Setup | null>(null);
   const created = createdId ? tenantById(createdId) : null;
   const admin = created?.adminUserId ? getMockUser(created.adminUserId) : null;
 
   const plan = useWatch({ control: form.control, name: "plan" });
+  const setupMethod = useWatch({ control: form.control, name: "setupMethod" });
   const chosen = useWatch({ control: form.control, name: "entitlements" });
   const matchesPlan =
     chosen.length === PLAN_ENTITLEMENTS[plan].length && PLAN_ENTITLEMENTS[plan].every((e) => chosen.includes(e));
@@ -91,6 +97,7 @@ export function ProvisionTenantView() {
     try {
       const record = await provisionTenant(values, actor);
       setCreatedId(record.id);
+      setSetup(record.setup);
       form.reset(emptyDraft);
       toast.success("Tenant provisioning started", { description: record.externalId });
     } catch (error) {
@@ -133,8 +140,21 @@ export function ProvisionTenantView() {
               <p className="text-sm text-slate-600">
                 {created.status === "Active"
                   ? `${admin.name} (${admin.email}) can now sign in and choose ${created.name} on Select Workspace.`
-                  : `${admin.name} (${admin.email}) can sign in once provisioning finishes (about ${PROVISIONING_SECONDS} seconds).`}
+                  : created.status === "Awaiting Admin"
+                    ? `Waiting for ${admin.name} (${admin.email}) to activate their account.`
+                    : `${admin.name} (${admin.email}) can sign in once provisioning finishes (about ${PROVISIONING_SECONDS} seconds) and their account is activated.`}
               </p>
+            ) : null}
+            {setup ? (
+              <div className="space-y-2 border-t border-border-slate pt-4">
+                <h2 className="text-sm font-bold text-navy">First admin account</h2>
+                <SetupDetails setup={setup} />
+                {setup.code ? (
+                  <p className="text-xs text-slate-500">
+                    Call a number from the contract, not one given in an email. If the code is lost, create a new one in the Tenant Directory.
+                  </p>
+                ) : null}
+              </div>
             ) : null}
             <Link href="/platform/tenants" className="text-sm font-bold text-navy underline underline-offset-4">
               View in Tenant Directory
@@ -207,7 +227,7 @@ export function ProvisionTenantView() {
             <div>
               <h2 className="text-sm font-bold tracking-wider text-navy uppercase">Initial Admin Account</h2>
               <p className="mt-1 text-xs text-slate-500">
-                This person becomes the tenant&apos;s Organisation Admin and can invite everyone else.
+                This person becomes the tenant&apos;s Organisation Admin and can invite everyone else. They choose their own password.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -217,6 +237,15 @@ export function ProvisionTenantView() {
               <Field label="Admin Email" htmlFor="adminEmail" error={form.formState.errors.adminEmail?.message}>
                 <Input id="adminEmail" type="email" placeholder="admin@customer.com" {...form.register("adminEmail")} />
               </Field>
+              <Field label="Account setup" htmlFor="setupMethod" hint={SETUP_METHOD_HINT[setupMethod]} className="md:col-span-2">
+                <select id="setupMethod" className={selectClass} {...form.register("setupMethod")}>
+                  {setupMethods.map((option) => (
+                    <option key={option} value={option}>
+                      {SETUP_METHOD_LABEL[option]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             </div>
           </section>
 
@@ -224,7 +253,7 @@ export function ProvisionTenantView() {
             <div>
               <h2 className="text-lg font-bold">Ready to Launch?</h2>
               <p className="mt-1 text-xs text-white/60">
-                Provisioning takes about {PROVISIONING_SECONDS} seconds. The tenant then shows as Active.
+                Provisioning takes about {PROVISIONING_SECONDS} seconds. The tenant is Active once its first admin has set up their account.
               </p>
             </div>
             <div className="flex gap-4">

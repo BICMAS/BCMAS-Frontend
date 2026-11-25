@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { allOrganisations, getMockUser } from "@/config/mock-users";
 import { resetProvisionedTenants } from "@/config/provisioned-tenants";
+import { completeActivation, resetAccounts, startActivation } from "@/features/accounts/services/accounts";
 import { WorkspaceSelectionView } from "@/features/authentication/components/workspace-selection-view";
 
 import { ProvisionTenantView } from "../components/provision-tenant-view";
@@ -38,6 +39,12 @@ vi.mock("@/stores/session-store", async () => {
   return { useSessionStore };
 });
 
+async function activateAdmin(code: string | null) {
+  const email = draft.adminEmail;
+  const started = await startActivation(email, code!);
+  if (started.ok) await completeActivation({ email, code: code!, emailCode: started.demoCode, password: "Str0ng-enough-one!" });
+}
+
 const draft = {
   legalName: "Acme Logistics",
   slug: "acme",
@@ -50,6 +57,7 @@ const draft = {
 beforeEach(() => {
   resetPlatform();
   resetProvisionedTenants();
+  resetAccounts();
   push.mockReset();
   session.setUserId.mockReset();
 });
@@ -98,9 +106,10 @@ describe("Provisioning a tenant", () => {
     expect(audit.adminAvatar).toBe(getMockUser("user-alex").avatarUrl);
   });
 
-  it("becomes Active once provisioning time has passed", async () => {
+  it("becomes Active once provisioning time has passed and its admin has activated", async () => {
     const record = await provisionTenant(draft, "Alex Root");
     expect(record.status).toBe("Provisioning");
+    await activateAdmin(record.setup.code);
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(Date.now() + (PROVISIONING_SECONDS + 1) * 1000);
     expect(tenantForOrganisation("org-acme")!.status).toBe("Active");
@@ -121,11 +130,12 @@ describe("Provisioning a tenant", () => {
   });
 
   it("lets the first admin sign in to the new workspace once it is active", async () => {
-    await provisionTenant(draft, "Alex Root");
+    const record = await provisionTenant(draft, "Alex Root");
+    await activateAdmin(record.setup.code);
     const user = userEvent.setup();
     const { unmount } = render(<WorkspaceSelectionView />);
     const card = await screen.findByRole("button", { name: /Acme Logistics/ });
-    expect(within(card).getByText("Provisioning")).toBeTruthy();
+    expect(within(card).getByText("Provisioning…")).toBeTruthy();
     await user.click(card);
     expect(session.setUserId).not.toHaveBeenCalled();
     unmount();
