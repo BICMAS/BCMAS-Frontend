@@ -269,6 +269,11 @@ export function canManageOrgLibrary(portal: UserPortal) {
   return portal === "hr_ld_admin";
 }
 
+/** HRBPs build and submit; only the HR Admin (the organisation's main HR) approves. */
+export function canApproveOrgAssessments(portal: UserPortal) {
+  return portal === "organisation_admin";
+}
+
 export function lifecycle(assessment: OrgAssessment): OrgLifecycle {
   const open = openVersion(assessment);
   if (open?.status === "in_review") return "in_review";
@@ -498,13 +503,14 @@ export function withdrawFromReview(organisationId: string, id: string, actor: st
 
 /* ── Assessment Review & Approval (guide §7) ──────────────────────────────── */
 
-/** HRBPs approve, but never a version they submitted themselves. */
+/** The HR Admin approves, never a version they submitted themselves. */
 export function canReview(assessment: OrgAssessment, actor: string, portal: UserPortal) {
   const open = openVersion(assessment);
-  return canManageOrgLibrary(portal) && open?.status === "in_review" && open.submittedBy !== actor;
+  return canApproveOrgAssessments(portal) && open?.status === "in_review" && open.submittedBy !== actor;
 }
 
-function requireReviewable(a: OrgAssessment, actor: string) {
+function requireReviewable(a: OrgAssessment, actor: string, portal: UserPortal) {
+  if (!canApproveOrgAssessments(portal)) throw new LibraryError("Only an HR Admin can review and approve assessments.");
   const open = openVersion(a);
   if (!open || open.status !== "in_review") throw new LibraryError("This assessment is not waiting for review.");
   if (open.submittedBy === actor) throw new LibraryError("Another approver must review a version you submitted.");
@@ -518,9 +524,10 @@ export function reviewItem(
   decision: ItemReview["decision"],
   comment: string,
   actor: string,
+  portal: UserPortal,
 ) {
   mutate(organisationId, id, (a) => {
-    const open = requireReviewable(a, actor);
+    const open = requireReviewable(a, actor, portal);
     const item = open.items.find((i) => i.id === itemId);
     if (!item) throw new LibraryError("Item not found.");
     if (decision !== "approved" && !comment.trim()) {
@@ -536,9 +543,9 @@ export function reviewItem(
 }
 
 /** Approves the whole version and makes it the active one; every item must be approved first. */
-export function approveOrgVersion(organisationId: string, id: string, actor: string) {
+export function approveOrgVersion(organisationId: string, id: string, actor: string, portal: UserPortal) {
   mutate(organisationId, id, (a) => {
-    const open = requireReviewable(a, actor);
+    const open = requireReviewable(a, actor, portal);
     const progress = reviewProgress(open);
     if (!progress.readyToApprove) {
       throw new LibraryError(
@@ -552,9 +559,9 @@ export function approveOrgVersion(organisationId: string, id: string, actor: str
 }
 
 /** Sends the version back to draft with the approver's comments (item comments are kept). */
-export function returnOrgVersion(organisationId: string, id: string, actor: string, note: string) {
+export function returnOrgVersion(organisationId: string, id: string, actor: string, note: string, portal: UserPortal) {
   mutate(organisationId, id, (a) => {
-    requireReviewable(a, actor);
+    requireReviewable(a, actor, portal);
     applyReturn(a, actor, note);
   });
 }

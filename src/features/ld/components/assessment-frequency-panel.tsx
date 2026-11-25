@@ -47,7 +47,7 @@ export function AssessmentFrequencyPanel({
       </h2>
       <p className="mt-1 text-sm text-slate-500">
         {readOnly
-          ? "The assessment timetable set by your Organisation Admin. You can view it but not change it."
+          ? "The assessment timetable set by your HR Admin. You can view it but not change it."
           : "Choose how many capability assessment cycles to run in a year, for one department or the entire organisation. The timetable below shows everyone when to complete their assessments."}
       </p>
 

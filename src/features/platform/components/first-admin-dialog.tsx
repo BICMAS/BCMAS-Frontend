@@ -69,7 +69,7 @@ export function FirstAdminDialog({ tenant, onClose }: { tenant: TenantRecord; on
           <Badge variant={working ? "success" : "info"}>{account.status}</Badge>
           {setup ? <SetupDetails setup={setup} /> : null}
           {!canHelp ? (
-            <p className="text-sm text-slate-500">This tenant has another working Organisation Admin, who manages its accounts.</p>
+            <p className="text-sm text-slate-500">This tenant has another working HR Admin, who manages its accounts.</p>
           ) : null}
           {canHelp && email !== null ? (
             <Field label="Correct email" htmlFor="first-admin-email">

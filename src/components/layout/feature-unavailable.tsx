@@ -42,7 +42,7 @@ export function FeatureUnavailable({ feature, organisationName, homeHref }: Feat
   return (
     <PageUnavailable
       title={`${feature} isn't enabled`}
-      message={`${feature} is not part of ${organisationName}'s subscription. Ask your Organisation Admin to contact BICMAS if you need it.`}
+      message={`${feature} is not part of ${organisationName}'s subscription. Ask your HR Admin to contact BICMAS if you need it.`}
       homeHref={homeHref}
     />
   );

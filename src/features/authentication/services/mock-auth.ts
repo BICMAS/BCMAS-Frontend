@@ -167,7 +167,7 @@ export function provisionedWorkspaces(): ProvisionedWorkspace[] {
       id: tenant.organisationId,
       initials: tenant.code.slice(0, 2),
       name: tenant.name,
-      role: "Organisation Admin",
+      role: "HR Admin",
       meta: tenant.status === "Active" ? `${tenant.plan} · new tenant` : tenant.status === "Awaiting Admin" ? "Awaiting account activation" : "Provisioning…",
       ready: tenant.status === "Active",
       adminUserId: tenant.adminUserId!,

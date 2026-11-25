@@ -25,9 +25,11 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import type { UserPortal } from "@/types";
 
 import {
   approveOrgVersion,
+  canApproveOrgAssessments,
   getOrgAssessment,
   returnOrgVersion,
   reviewItem,
@@ -48,7 +50,7 @@ import { CompareDialog, PreviewDialog } from "./preview-compare-dialogs";
 import { OverviewTab, ReasonDialog, runCommand as run, type ReasonAction } from "./template-tabs";
 
 export function ReviewView({ assessmentId }: { assessmentId: string }) {
-  return <OrgLibraryGate>{(ctx) => <Review assessmentId={assessmentId} {...ctx} />}</OrgLibraryGate>;
+  return <OrgLibraryGate approvers>{(ctx) => <Review assessmentId={assessmentId} {...ctx} />}</OrgLibraryGate>;
 }
 
 type CommentAction = { item: TemplateItem; decision: "returned" | "rejected" } | null;
@@ -59,7 +61,7 @@ const DECISION_BADGE: Record<ItemReview["decision"], { label: string; variant: "
   rejected: { label: "Rejected", variant: "error" },
 };
 
-function Review({ assessmentId, organisationId, actor }: { assessmentId: string; organisationId: string; actor: string }) {
+function Review({ assessmentId, organisationId, actor, portal }: { assessmentId: string; organisationId: string; actor: string; portal: UserPortal }) {
   const router = useRouter();
   const revision = useOrgLibraryRevision();
   const assessment = useMemo(() => {
@@ -83,7 +85,9 @@ function Review({ assessmentId, organisationId, actor }: { assessmentId: string;
     );
   }
 
-  const backHref = `/talent/library/${assessment.id}`;
+  const approver = canApproveOrgAssessments(portal);
+  // The HR Admin reviews from Assessment Approvals; the library itself is the HRBPs'.
+  const backHref = approver ? "/talent/approvals" : `/talent/library/${assessment.id}`;
   const open = openVersion(assessment);
   if (!open || open.status !== "in_review") {
     return (
@@ -100,12 +104,13 @@ function Review({ assessmentId, organisationId, actor }: { assessmentId: string;
   const version = open;
   const live = publishedVersion(assessment);
   const ownSubmission = version.submittedBy === actor;
+  const canDecide = approver && !ownSubmission;
   const flags = reviewFlags(version);
   const progress = reviewProgress(version);
   const submittedAt = [...version.history].reverse().find((e) => e.action === "Submitted for review")?.at;
   const decide = (item: TemplateItem, decision: ItemReview["decision"], comment = "") =>
     run(
-      () => reviewItem(organisationId, assessment.id, item.id, decision, comment, actor),
+      () => reviewItem(organisationId, assessment.id, item.id, decision, comment, actor, portal),
       decision === "approved" ? `${item.id.toUpperCase()} approved.` : decision === "returned" ? `${item.id.toUpperCase()} returned for changes.` : `${item.id.toUpperCase()} rejected.`,
     );
 
@@ -125,9 +130,13 @@ function Review({ assessmentId, organisationId, actor }: { assessmentId: string;
         </p>
       </div>
 
-      {ownSubmission ? (
+      {!approver ? (
         <p className="rounded-xl bg-info-soft px-4 py-3 text-sm text-info-soft-foreground">
-          You submitted this version, so another approver must review it. You can view it but not approve it.
+          Waiting for an HR Admin to review and approve this version. You can view it but not approve it.
+        </p>
+      ) : ownSubmission ? (
+        <p className="rounded-xl bg-info-soft px-4 py-3 text-sm text-info-soft-foreground">
+          You submitted this version, so another HR Admin must review it. You can view it but not approve it.
         </p>
       ) : null}
 
@@ -183,7 +192,7 @@ function Review({ assessmentId, organisationId, actor }: { assessmentId: string;
                 item={item}
                 review={version.itemReviews?.[item.id]}
                 flags={flags.filter((f) => f.itemId === item.id)}
-                canDecide={!ownSubmission}
+                canDecide={canDecide}
                 onApprove={() => decide(item, "approved")}
                 onReturn={() => setCommenting({ item, decision: "returned" })}
                 onReject={() => setCommenting({ item, decision: "rejected" })}
@@ -207,7 +216,7 @@ function Review({ assessmentId, organisationId, actor }: { assessmentId: string;
         </TabsContent>
       </Tabs>
 
-      {!ownSubmission ? (
+      {canDecide ? (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2" aria-label="Review actions">
             <Button type="button" variant="secondary" onClick={() => setReasonAction("return")}>
@@ -223,7 +232,7 @@ function Review({ assessmentId, organisationId, actor }: { assessmentId: string;
               variant="accent"
               disabled={!progress.readyToApprove}
               onClick={() => {
-                if (run(() => approveOrgVersion(organisationId, assessment.id, actor), "Assessment approved and published. It can now be assigned to vacancies.")) {
+                if (run(() => approveOrgVersion(organisationId, assessment.id, actor, portal), "Assessment approved and published. It can now be assigned to vacancies.")) {
                   router.push(backHref);
                 }
               }}
@@ -256,7 +265,7 @@ function Review({ assessmentId, organisationId, actor }: { assessmentId: string;
         retireDescription=""
         onCancel={() => setReasonAction(null)}
         onConfirm={(reason) => {
-          if (run(() => returnOrgVersion(organisationId, assessment.id, actor, reason), "Returned to the author with your comments.")) {
+          if (run(() => returnOrgVersion(organisationId, assessment.id, actor, reason, portal), "Returned to the author with your comments.")) {
             setReasonAction(null);
             router.push(backHref);
           }

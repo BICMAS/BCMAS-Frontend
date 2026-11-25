@@ -7,7 +7,7 @@ export type UserPortal =
 
 export type AppRole =
   | "Platform Super Admin"
-  | "Organisation Admin"
+  | "HR Admin"
   | "Department Admin"
   | "HRBP"
   | "Line Manager"

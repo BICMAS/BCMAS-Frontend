@@ -1,5 +1,7 @@
 "use client";
 
+
+import type { UserPortal } from "@/types";
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +19,7 @@ import { useHydratedUser } from "@/features/talent/use-hydrated-user";
 import { useSessionStore } from "@/stores/session-store";
 
 import { libraryRevision, subscribeLibrary } from "../services/central-library";
-import { canManageOrgLibrary, copiesOfMaster, orgLibraryRevision, subscribeOrgLibrary } from "../services/org-library";
+import { canApproveOrgAssessments, canManageOrgLibrary, copiesOfMaster, orgLibraryRevision, subscribeOrgLibrary } from "../services/org-library";
 
 function subscribeBoth(listener: () => void) {
   const a = subscribeOrgLibrary(listener);
@@ -33,15 +35,21 @@ export function useOrgLibraryRevision() {
   return useSyncExternalStore(subscribeBoth, () => orgLibraryRevision() * 100_000 + libraryRevision(), () => 0);
 }
 
-/** HRBP-only area, scoped to the signed-in organisation. */
-export function OrgLibraryGate({ children }: { children: (ctx: { organisationId: string; actor: string }) => ReactNode }) {
+/** HRBP area, scoped to the signed-in organisation. `approvers` also lets the HR Admin in. */
+export function OrgLibraryGate({
+  children,
+  approvers = false,
+}: {
+  children: (ctx: { organisationId: string; actor: string; portal: UserPortal }) => ReactNode;
+  approvers?: boolean;
+}) {
   const user = useHydratedUser();
   const organisationId = useSessionStore((state) => state.organisationId);
   if (!user) return null;
-  if (!canManageOrgLibrary(user.portal)) {
+  if (!canManageOrgLibrary(user.portal) && !(approvers && canApproveOrgAssessments(user.portal))) {
     return <p className="text-sm text-slate-500">The organisation assessment library is for HRBPs.</p>;
   }
-  return <>{children({ organisationId, actor: user.name })}</>;
+  return <>{children({ organisationId, actor: user.name, portal: user.portal })}</>;
 }
 
 /** Role titles from the organisation's role profiles, for the "Linked role" field. */

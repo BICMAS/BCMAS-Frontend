@@ -116,7 +116,7 @@ describe("Provisioning a tenant", () => {
     expect(listAuditEvents()[0]!.summary).toBe("Provisioning completed: Acme Logistics is active");
   });
 
-  it("creates the organisation and its first Organisation Admin", async () => {
+  it("creates the organisation and its first HR Admin", async () => {
     await provisionTenant(draft, "Alex Root");
     expect(allOrganisations().some((o) => o.id === "org-acme" && o.name === "Acme Logistics")).toBe(true);
     expect(getMockUser("user-acme-admin")).toMatchObject({

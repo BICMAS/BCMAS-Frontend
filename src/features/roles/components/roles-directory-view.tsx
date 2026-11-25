@@ -64,7 +64,7 @@ export function RolesDirectoryView({
   );
   const [employeesRole, setEmployeesRole] = useState<RoleRecord | null>(null);
   const user = useHydratedUser();
-  // Organisation Admin additions: skill profile coverage and who is behind each employee count.
+  // HR Admin additions: skill profile coverage and who is behind each employee count.
   const isOrgAdmin = user?.portal === "organisation_admin";
 
   const summaryMetrics = useMemo<OrgMetric[]>(() => {
@@ -443,7 +443,7 @@ export function RolesDirectoryView({
         </DialogContent>
       </Dialog>
 
-      {/* Organisation pages are for the Organisation Admin, not the HRBP. */}
+      {/* Organisation pages are for the HR Admin, not the HRBP. */}
       {user?.portal === "hr_ld_admin" ? null : (
         <p className="text-xs text-slate-400">
           Need org structure first?{" "}

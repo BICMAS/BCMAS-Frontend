@@ -16,7 +16,7 @@ import type { MockUser } from "@/types/user";
  * backend must create, hash, send, limit and check the codes and passwords, and check permissions.
  */
 
-export const accessRoles = ["Organisation Admin", "HRBP", "Line Manager", "Employee"] as const;
+export const accessRoles = ["HR Admin", "HRBP", "Line Manager", "Employee"] as const;
 export type AccessRole = (typeof accessRoles)[number];
 
 export const setupMethods = ["code", "link", "sso"] as const;
@@ -43,7 +43,7 @@ export type Account = {
   email: string;
   accessRole: AccessRole;
   status: AccountStatus;
-  /** The tenant's first Organisation Admin, created by the Platform Super Admin. */
+  /** The tenant's first HR Admin, created by the Platform Super Admin. */
   firstAdmin: boolean;
   employeeId: string | null;
   codeExpiresAt: string | null;
@@ -90,13 +90,13 @@ type Row = {
 type State = { rows: Row[]; methods: Record<string, SetupMethod>; events: AccountEvent[]; sequence: number };
 
 const ROLE_BY_PORTAL: Partial<Record<UserPortal, AccessRole>> = {
-  organisation_admin: "Organisation Admin",
+  organisation_admin: "HR Admin",
   hr_ld_admin: "HRBP",
   line_manager: "Line Manager",
   employee: "Employee",
 };
 const PORTAL_BY_ROLE: Record<AccessRole, UserPortal> = {
-  "Organisation Admin": "organisation_admin",
+  "HR Admin": "organisation_admin",
   HRBP: "hr_ld_admin",
   "Line Manager": "line_manager",
   Employee: "employee",
@@ -272,7 +272,7 @@ function publish(row: Row) {
     email: row.email,
     roleLabel: row.accessRole,
     portal: PORTAL_BY_ROLE[row.accessRole],
-    jobTitle: row.accessRole === "Organisation Admin" ? "Organisation Administrator" : row.accessRole,
+    jobTitle: row.accessRole === "HR Admin" ? "HR Administrator" : row.accessRole,
     avatarUrl: known?.avatarUrl ?? initialsAvatar(row.name),
     organisationId: row.organisationId,
     unreadNotifications: 0,
@@ -282,7 +282,7 @@ function publish(row: Row) {
 /* ── permissions ───────────────────────────────────────────────────────── */
 
 const otherWorkingAdmins = (row: Row) =>
-  db().rows.filter((r) => r.organisationId === row.organisationId && r.id !== row.id && r.accessRole === "Organisation Admin" && r.active && !r.suspended);
+  db().rows.filter((r) => r.organisationId === row.organisationId && r.id !== row.id && r.accessRole === "HR Admin" && r.active && !r.suspended);
 
 const isOrgAdmin = (actor: Actor, organisationId: string) => actor.portal === "organisation_admin" && actor.organisationId === organisationId;
 
@@ -302,12 +302,12 @@ function setupManaged(actor: Actor, accountId: string): Row {
 const platformMayHelp = (row: Row) => row.firstAdmin && !row.suspended && !otherWorkingAdmins(row).length;
 
 function notSelf(actor: Actor, row: Row) {
-  if (actor.id === row.id) throw new Error("You cannot do this to your own account. Ask another Organisation Admin.");
+  if (actor.id === row.id) throw new Error("You cannot do this to your own account. Ask another HR Admin.");
 }
 
 function keepAnAdmin(row: Row) {
-  if (row.accessRole === "Organisation Admin" && row.active && !row.suspended && !otherWorkingAdmins(row).length) {
-    throw new Error("This is the last working Organisation Admin. Add another one first.");
+  if (row.accessRole === "HR Admin" && row.active && !row.suspended && !otherWorkingAdmins(row).length) {
+    throw new Error("This is the last working HR Admin. Add another one first.");
   }
 }
 
@@ -376,12 +376,12 @@ export async function createFirstAdmin(input: { user: MockUser; method: SetupMet
     organisationId: input.user.organisationId,
     name: input.user.name,
     email: tidyEmail(input.user.email),
-    accessRole: "Organisation Admin",
+    accessRole: "HR Admin",
     firstAdmin: true,
   });
   const setup = await issue(row);
   data.rows.push(row);
-  record(row.organisationId, input.actorName, `Invited ${row.name} as the first Organisation Admin`);
+  record(row.organisationId, input.actorName, `Invited ${row.name} as the first HR Admin`);
   emit();
   return setup;
 }
@@ -391,7 +391,7 @@ export async function inviteUser(
   actor: Actor,
 ): Promise<Setup> {
   await mockLatency();
-  if (!isOrgAdmin(actor, input.organisationId)) throw new Error("Only an Organisation Admin can invite people");
+  if (!isOrgAdmin(actor, input.organisationId)) throw new Error("Only an HR Admin can invite people");
   const email = tidyEmail(input.email);
   assertEmailFree(email, input.organisationId);
   if (input.employeeId && db().rows.some((row) => row.organisationId === input.organisationId && row.employeeId === input.employeeId)) {
@@ -474,7 +474,7 @@ export async function changeAccessRole(accountId: string, accessRole: AccessRole
   const row = managed(actor, accountId);
   notSelf(actor, row);
   if (row.accessRole === accessRole) return;
-  if (accessRole !== "Organisation Admin") keepAnAdmin(row);
+  if (accessRole !== "HR Admin") keepAnAdmin(row);
   const before = row.accessRole;
   row.accessRole = accessRole;
   if (row.active || row.firstAdmin) publish(row);

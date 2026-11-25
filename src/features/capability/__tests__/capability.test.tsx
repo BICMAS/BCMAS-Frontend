@@ -147,9 +147,9 @@ describe("Gaps and match", () => {
 });
 
 describe("Cycles", () => {
-  it("only Organisation Admins create cycles; duplicates are refused", () => {
+  it("only HR Admins create cycles; duplicates are refused", () => {
     const input = { name: "2030 review", scope: "Entire organisation", year: 2030, cyclesPerYear: 1 as const, number: 1 };
-    expect(() => createCapabilityCycle(PRIYA, input)).toThrow("Organisation Admin");
+    expect(() => createCapabilityCycle(PRIYA, input)).toThrow("HR Admin");
     createCapabilityCycle(SARAH, input);
     expect(() => createCapabilityCycle(SARAH, input)).toThrow("already exists");
     expect(scheduleProgramme(SARAH, "Entire organisation", 4, 2031)).toBe(4);
@@ -328,9 +328,10 @@ describe("Higher levels and essential skills", () => {
 
   it("marks essential skills on the role, for cycles activated later", async () => {
     const role = listRoleRecords().find((r) => r.id === "role-ssa")!;
-    expect(() => setEssentialSkill(MICHAEL, "role-ssa", "Kubernetes & Docker", true)).toThrow("Organisation Admin");
+    expect(() => setEssentialSkill(MICHAEL, "role-ssa", "Kubernetes & Docker", true)).toThrow("HR Admin");
+    expect(() => setEssentialSkill(PRIYA, "role-ssa", "Kubernetes & Docker", true)).toThrow("Only an HR Admin");
     expect(() => setEssentialSkill(SARAH, "role-ssa", "Juggling", true)).toThrow("not in this role");
-    current = PRIYA;
+    current = SARAH;
     render(<EssentialSkillsCard role={role} />);
     await userEvent.click(screen.getByRole("checkbox", { name: "Kubernetes & Docker is essential" }));
     expect(getAssessment(MICHAEL, ELENA)!.items.some((i) => i.essential)).toBe(false); // live assessment unchanged

@@ -52,7 +52,10 @@ export function EssentialSkillsCard({ role }: { role: RoleRecord }) {
           </li>
         ))}
       </ul>
-      {entry ? <p className="text-xs text-slate-500">Last changed by {entry.by}.</p> : null}
+      <p className="text-xs text-slate-500">
+        {entry ? `Last changed by ${entry.by}.` : ""}
+        {!canEdit ? " Only an HR Admin can change these." : ""}
+      </p>
     </section>
   );
 }

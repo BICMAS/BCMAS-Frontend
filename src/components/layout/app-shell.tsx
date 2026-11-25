@@ -86,7 +86,7 @@ function AppShellInner({ children, className }: AppShellProps) {
           {blockedForRole ? (
             <PageUnavailable
               title="This page isn't part of your role"
-              message="Your role doesn't include this page. Ask your Organisation Admin if you need access."
+              message="Your role doesn't include this page. Ask your HR Admin if you need access."
               homeHref={navigation.defaultHref}
             />
           ) : blockedFeature ? (

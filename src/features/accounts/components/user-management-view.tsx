@@ -63,7 +63,7 @@ export function UserManagementView() {
   const user = useSessionStore((s) => s.user);
   if (revision === -1) return null;
   if (user.portal !== "organisation_admin") {
-    return <p className="text-sm text-slate-500">User Management is available to the Organisation Admin.</p>;
+    return <p className="text-sm text-slate-500">User Management is available to the HR Admin.</p>;
   }
   return <Users actor={user} />;
 }

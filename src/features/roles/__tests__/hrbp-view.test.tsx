@@ -115,7 +115,7 @@ describe("Skills Library for HRBPs", () => {
     expect(screen.queryByRole("link", { name: "Framework settings" })).toBeNull();
   });
 
-  it("keeps the button for the Organisation Admin", () => {
+  it("keeps the button for the HR Admin", () => {
     currentUser = getMockUser("user-sarah");
     render(<SkillsLibraryView initialSkills={[]} />);
     expect(screen.getByRole("link", { name: "Framework settings" })).toBeTruthy();
@@ -133,7 +133,7 @@ describe("Capability Assessment Cycles for HRBPs", () => {
     expect(screen.getByLabelText("Applies to").matches(":disabled")).toBe(true);
   });
 
-  it("stays editable for the Organisation Admin", () => {
+  it("stays editable for the HR Admin", () => {
     currentUser = getMockUser("user-sarah");
     render(<AssessmentCyclesView />);
     expect(screen.getByRole("button", { name: "Create New Cycle" })).toBeTruthy();

@@ -153,9 +153,9 @@ describe("Activation", () => {
 });
 
 describe("Who can do what", () => {
-  it("only the tenant's own Organisation Admin manages its accounts", async () => {
+  it("only the tenant's own HR Admin manages its accounts", async () => {
     for (const id of ["user-priya", "user-michael", "user-james", "user-alex"]) {
-      await expect(inviteUser({ organisationId: "org-gec", name: "X Y", email: "x@y.example", accessRole: "Employee" }, getMockUser(id))).rejects.toThrow(/Only an Organisation Admin/);
+      await expect(inviteUser({ organisationId: "org-gec", name: "X Y", email: "x@y.example", accessRole: "Employee" }, getMockUser(id))).rejects.toThrow(/Only an HR Admin/);
       await expect(suspendAccount("user-james", getMockUser(id))).rejects.toThrow(/cannot manage/);
     }
     const other = { ...sarah, id: "other", organisationId: "org-ths" };
@@ -165,7 +165,7 @@ describe("Who can do what", () => {
 
   it("keeps the last working admin and blocks changes to your own account", async () => {
     await expect(suspendAccount("user-sarah", sarah)).rejects.toThrow(/your own account/);
-    const second = await inviteUser({ organisationId: "org-gec", name: "Bola Ade", email: "bola@gec.example", accessRole: "Organisation Admin" }, sarah);
+    const second = await inviteUser({ organisationId: "org-gec", name: "Bola Ade", email: "bola@gec.example", accessRole: "HR Admin" }, sarah);
     const bola = { ...sarah, id: second.accountId, name: "Bola Ade" };
     // Not activated yet, so Sarah is still the last working admin.
     await expect(suspendAccount("user-sarah", bola)).rejects.toThrow(/last working/);
@@ -252,7 +252,7 @@ describe("First admin of a tenant", () => {
     await activate("ngozi@acme.example", next.code!);
     expect(platformCanHelp(id)).toBe(true);
     const ngozi = getMockUser(id);
-    const second = await inviteUser({ organisationId: "org-acme", name: "Tunde Ola", email: "tunde@acme.example", accessRole: "Organisation Admin" }, ngozi);
+    const second = await inviteUser({ organisationId: "org-acme", name: "Tunde Ola", email: "tunde@acme.example", accessRole: "HR Admin" }, ngozi);
     await activate("tunde@acme.example", second.code!);
     expect(platformCanHelp(id)).toBe(false);
     await expect(resetSignIn(id, alex)).rejects.toThrow(/cannot manage/);
@@ -304,7 +304,7 @@ describe("Screens", () => {
   it("is closed to other roles", () => {
     session.userId = "user-priya";
     render(<UserManagementView />);
-    expect(screen.getByText(/available to the Organisation Admin/)).toBeTruthy();
+    expect(screen.getByText(/available to the HR Admin/)).toBeTruthy();
   });
 
   it("activates on the Activate Account page", async () => {

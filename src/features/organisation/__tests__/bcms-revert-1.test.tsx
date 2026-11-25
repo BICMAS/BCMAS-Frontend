@@ -27,7 +27,7 @@ import { listSkills } from "@/features/skills/services/mock-skills";
 import { parseCsv, readSpreadsheetRows } from "@/lib/spreadsheet";
 import type { MockUser } from "@/types/user";
 
-// BCMS Revert 1 (Organisation Admin journey).
+// BCMS Revert 1 (HR Admin journey).
 
 const push = vi.fn();
 let currentUser: MockUser | null = getMockUser("user-sarah");
@@ -52,7 +52,7 @@ vi.mock("@/lib/spreadsheet", async (importOriginal) => {
 beforeEach(() => {
   push.mockReset();
   downloads.length = 0;
-  currentUser = getMockUser("user-sarah"); // Organisation Admin
+  currentUser = getMockUser("user-sarah"); // HR Admin
   useMappingApprovals.setState({ changes: [] });
 });
 
@@ -272,7 +272,7 @@ describe("Training Plan", () => {
   });
 });
 
-describe("Organisation Admin navigation", () => {
+describe("HR Admin navigation", () => {
   it("adds Training Plan and renames the learning library", () => {
     const items = getNavigationConfig("organisation_admin").sections.flatMap((s) => s.items);
     expect(items.find((i) => i.id === "training-plan")?.href).toBe("/training-plan");

@@ -1,5 +1,5 @@
 /**
- * Organisation Admin role insights (mock, development only): role structure details, skills
+ * HR Admin role insights (mock, development only): role structure details, skills
  * profile coverage and the employees counted for each role. Replace with backend data when
  * the roles/workforce APIs are available.
  */

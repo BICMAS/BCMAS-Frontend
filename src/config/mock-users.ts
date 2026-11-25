@@ -34,9 +34,9 @@ export const mockUsers: MockUser[] = [
     id: "user-sarah",
     name: "Sarah Jenkins",
     email: "sarah.jenkins@gec.example",
-    roleLabel: "Organisation Admin",
+    roleLabel: "HR Admin",
     portal: "organisation_admin",
-    jobTitle: "Organisation Administrator",
+    jobTitle: "HR Administrator",
     avatarUrl:
       "https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg",
     organisationId: "org-gec",

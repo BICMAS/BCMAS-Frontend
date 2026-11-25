@@ -50,13 +50,13 @@ export function isEssentialSkill(roleId: string, skill: string) {
   return db()[roleId]?.skills.includes(skill) ?? false;
 }
 
-/** Organisation Admins and HRBPs maintain role profiles. */
+/** Only the HR Admin (the organisation's main HR) decides which skills are essential. */
 export function canEditEssentialSkills(portal: string | undefined) {
-  return portal === "organisation_admin" || portal === "hr_ld_admin";
+  return portal === "organisation_admin";
 }
 
 export function setEssentialSkill(user: { name: string; portal: string }, roleId: string, skill: string, essential: boolean) {
-  if (!canEditEssentialSkills(user.portal)) throw new Error("Only an Organisation Admin or HRBP can change this.");
+  if (!canEditEssentialSkills(user.portal)) throw new Error("Only an HR Admin can change this.");
   const role = listRoleRecords().find((r) => r.id === roleId);
   if (!role || ![...role.technicalSkills.map((s) => s.name), ...role.behaviouralSkills].includes(skill)) {
     throw new Error("That skill is not in this role profile.");

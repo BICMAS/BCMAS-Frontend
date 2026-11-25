@@ -4,3 +4,4 @@ export { OrgLibraryView } from "./components/org-library-view";
 export { BcmsTemplateView, OrgAssessmentDetailsView } from "./components/org-assessment-details-view";
 export { AiBuilderView } from "./components/ai-builder-view";
 export { ReviewView } from "./components/review-view";
+export { ApprovalsView } from "./components/approvals-view";

@@ -62,7 +62,7 @@ export type TenantRecord = {
   users: number;
   storageGb: number;
   apiRequests: string;
-  /** First Organisation Admin (provisioned tenants). */
+  /** First HR Admin (provisioned tenants). */
   adminUserId?: string;
   /** ISO time provisioning finishes; the tenant then becomes Active. */
   provisioningCompletesAt?: string;
@@ -467,9 +467,9 @@ export async function provisionTenant(input: ProvisionDraft, actorName: string):
     id: `user-${slug}-admin`,
     name: input.adminName.trim(),
     email: adminEmail,
-    roleLabel: "Organisation Admin",
+    roleLabel: "HR Admin",
     portal: "organisation_admin",
-    jobTitle: "Organisation Administrator",
+    jobTitle: "HR Administrator",
     avatarUrl: initialsAvatar(input.adminName.trim()),
     organisationId,
     unreadNotifications: 0,

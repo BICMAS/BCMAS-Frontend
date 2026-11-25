@@ -81,7 +81,7 @@ function SelfAssessment({ user, routeId }: { user: MockUser; routeId: string }) 
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>Your self-rating is a starting point. Your result comes from your reviewer&apos;s check of your evidence.</li>
           <li>
-            {assessment.reviewer.name} reviews your ratings and evidence. HR and your Organisation Admin can see your results.
+            {assessment.reviewer.name} reviews your ratings and evidence. HR and your HR Admin can see your results.
             Colleagues cannot.
           </li>
           <li>You see your results once every skill has been reviewed and results are released.</li>
@@ -224,7 +224,7 @@ function Closed({ user, assessment }: { user: MockUser; assessment: CapabilityAs
       <div className="rounded-2xl border border-border-slate bg-white p-8">
         <h1 className="text-xl font-bold text-navy">Self-assessment has closed</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Your ratings so far are saved. Ask {assessment.reviewer.name} or your Organisation Admin for an extension.
+          Your ratings so far are saved. Ask {assessment.reviewer.name} or your HR Admin for an extension.
         </p>
       </div>
       <Adjustments user={user} assessment={assessment} />

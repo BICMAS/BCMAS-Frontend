@@ -1,9 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getMockUser } from "@/config/mock-users";
 
+import { ApprovalsView } from "../components/approvals-view";
 import { OrgAssessmentDetailsView } from "../components/org-assessment-details-view";
 import { ReviewView } from "../components/review-view";
 import { resetLibrary } from "../services/central-library";
@@ -30,7 +31,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const session = vi.hoisted(() => ({ userId: "user-priya", organisationId: "org-gec" }));
+const session = vi.hoisted(() => ({ userId: "user-sarah", organisationId: "org-gec" }));
 vi.mock("@/stores/session-store", async () => {
   const { getMockUser: user } = await import("@/config/mock-users");
   const state = () => ({ user: user(session.userId), userId: session.userId, organisationId: session.organisationId });
@@ -42,7 +43,9 @@ vi.mock("@/stores/session-store", async () => {
 });
 
 const GEC = "org-gec";
-const APPROVER = getMockUser("user-priya").name;
+// HRBPs build and submit; only the HR Admin approves.
+const APPROVER = getMockUser("user-sarah").name;
+const HR = "organisation_admin" as const;
 const AUTHOR = "Tunde Bakare"; // submitted the seeded Customer Service – Custom v1.1
 const ID = "oa-service-custom";
 
@@ -52,14 +55,14 @@ beforeEach(() => {
   push.mockReset();
   resetLibrary();
   resetOrgLibrary();
-  session.userId = "user-priya";
+  session.userId = "user-sarah";
 });
 
 describe("Review rules", () => {
   it("needs every item approved, then publishes the version and supersedes the old one", () => {
-    expect(() => approveOrgVersion(GEC, ID, APPROVER)).toThrow(/3 still pending/);
-    for (const item of inReview().items) reviewItem(GEC, ID, item.id, "approved", "", APPROVER);
-    approveOrgVersion(GEC, ID, APPROVER);
+    expect(() => approveOrgVersion(GEC, ID, APPROVER, HR)).toThrow(/3 still pending/);
+    for (const item of inReview().items) reviewItem(GEC, ID, item.id, "approved", "", APPROVER, HR);
+    approveOrgVersion(GEC, ID, APPROVER, HR);
 
     const a = getOrgAssessment(GEC, ID)!;
     expect(publishedVersion(a)).toMatchObject({ version: "1.1", reviewedBy: APPROVER });
@@ -70,24 +73,24 @@ describe("Review rules", () => {
 
   it("requires a comment to return or reject, and blocks approval until fixed", () => {
     const [q1] = inReview().items;
-    expect(() => reviewItem(GEC, ID, q1!.id, "returned", " ", APPROVER)).toThrow(/what needs to change/);
-    reviewItem(GEC, ID, q1!.id, "rejected", "Policy changed in 2026", APPROVER);
-    for (const item of inReview().items.slice(1)) reviewItem(GEC, ID, item.id, "approved", "", APPROVER);
+    expect(() => reviewItem(GEC, ID, q1!.id, "returned", " ", APPROVER, HR)).toThrow(/what needs to change/);
+    reviewItem(GEC, ID, q1!.id, "rejected", "Policy changed in 2026", APPROVER, HR);
+    for (const item of inReview().items.slice(1)) reviewItem(GEC, ID, item.id, "approved", "", APPROVER, HR);
     expect(reviewProgress(inReview())).toMatchObject({ approved: 2, rejected: 1, readyToApprove: false });
-    expect(() => approveOrgVersion(GEC, ID, APPROVER)).toThrow(/Return the assessment for changes/);
+    expect(() => approveOrgVersion(GEC, ID, APPROVER, HR)).toThrow(/Return the assessment for changes/);
   });
 
   it("does not let the submitter review their own version", () => {
     const [q1] = inReview().items;
-    expect(() => reviewItem(GEC, ID, q1!.id, "approved", "", AUTHOR)).toThrow(LibraryError);
-    expect(() => approveOrgVersion(GEC, ID, AUTHOR)).toThrow(/Another approver/);
+    expect(() => reviewItem(GEC, ID, q1!.id, "approved", "", AUTHOR, HR)).toThrow(LibraryError);
+    expect(() => approveOrgVersion(GEC, ID, AUTHOR, HR)).toThrow(/Another approver/);
   });
 
   it("returns the version to its author with item comments, and an edited item needs a fresh review", () => {
     const [q1, q2] = inReview().items;
-    reviewItem(GEC, ID, q1!.id, "returned", "Say 30 days, as in the policy", APPROVER);
-    reviewItem(GEC, ID, q2!.id, "approved", "", APPROVER);
-    returnOrgVersion(GEC, ID, APPROVER, "Fix Q01, then resubmit");
+    reviewItem(GEC, ID, q1!.id, "returned", "Say 30 days, as in the policy", APPROVER, HR);
+    reviewItem(GEC, ID, q2!.id, "approved", "", APPROVER, HR);
+    returnOrgVersion(GEC, ID, APPROVER, "Fix Q01, then resubmit", HR);
 
     const draft = inReview();
     expect(draft.status).toBe("draft");
@@ -140,7 +143,7 @@ describe("Assessment Review & Approval screen", () => {
     await user.click(screen.getByRole("button", { name: "Approve and Publish" }));
 
     await waitFor(() => expect(publishedVersion(getOrgAssessment(GEC, ID)!)?.version).toBe("1.1"));
-    expect(push).toHaveBeenCalledWith(`/talent/library/${ID}`);
+    expect(push).toHaveBeenCalledWith("/talent/approvals");
   });
 
   it("returns an item with a comment that the author then sees", async () => {
@@ -164,21 +167,41 @@ describe("Assessment Review & Approval screen", () => {
   it("shows the author's returned items on the assessment page", async () => {
     const user = userEvent.setup();
     const [q1] = inReview().items;
-    reviewItem(GEC, ID, q1!.id, "returned", "Wrong refund period", APPROVER);
-    returnOrgVersion(GEC, ID, APPROVER, "Fix Q01");
+    reviewItem(GEC, ID, q1!.id, "returned", "Wrong refund period", APPROVER, HR);
+    returnOrgVersion(GEC, ID, APPROVER, "Fix Q01", HR);
     session.userId = "user-priya";
     render(<OrgAssessmentDetailsView assessmentId={ID} />);
     await user.click(screen.getByRole("tab", { name: "Items" }));
     expect(screen.getByText(/Returned by .*Wrong refund period/)).toBeTruthy();
   });
 
-  it("is view-only for the person who submitted the version", () => {
-    returnOrgVersion(GEC, ID, APPROVER, "Please recheck");
-    submitForApproval(GEC, ID, APPROVER); // Priya resubmits, so she cannot review it herself
+  it("is view-only for an HRBP, who cannot approve", () => {
+    const priya = getMockUser("user-priya").name;
+    expect(() => reviewItem(GEC, ID, inReview().items[0]!.id, "approved", "", priya, "hr_ld_admin")).toThrow(/Only an HR Admin/);
+    expect(() => approveOrgVersion(GEC, ID, priya, "hr_ld_admin")).toThrow(/Only an HR Admin/);
+    expect(() => returnOrgVersion(GEC, ID, priya, "No", "hr_ld_admin")).toThrow(/Only an HR Admin/);
+    session.userId = "user-priya";
     render(<ReviewView assessmentId={ID} />);
-    expect(screen.getByText(/another approver must review it/)).toBeTruthy();
+    expect(screen.getByText(/Waiting for an HR Admin/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Approve and Publish" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Approve Q/ })).toBeNull();
+  });
+
+  it("is view-only for an HR Admin who submitted the version", () => {
+    returnOrgVersion(GEC, ID, APPROVER, "Please recheck", HR);
+    submitForApproval(GEC, ID, APPROVER);
+    render(<ReviewView assessmentId={ID} />);
+    expect(screen.getByText(/another HR Admin must review it/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Approve and Publish" })).toBeNull();
+  });
+
+  it("lists assessments waiting for the HR Admin", () => {
+    render(<ApprovalsView />);
+    expect(screen.getByRole("link", { name: /Review/ }).getAttribute("href")).toBe(`/talent/library/${ID}/review`);
+    cleanup();
+    session.userId = "user-priya";
+    render(<ApprovalsView />);
+    expect(screen.getByText(/for the HR Admin/)).toBeTruthy();
   });
 
   it("says when nothing is waiting for review", () => {

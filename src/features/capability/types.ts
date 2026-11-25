@@ -55,7 +55,7 @@ export type Verification = {
 export type Disagreement = {
   reason: string;
   at: string;
-  /** Chosen by the Organisation Admin; never the original reviewer. */
+  /** Chosen by the HR Admin; never the original reviewer. */
   reviewer: { userId: string; name: string } | null;
   outcome: { changed: boolean; by: string; at: string } | null;
 };

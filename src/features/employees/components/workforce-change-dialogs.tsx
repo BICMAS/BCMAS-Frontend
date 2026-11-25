@@ -449,7 +449,7 @@ export function PendingApprovalsPanel({
           Pending approval ({pending.length})
         </h2>
         <p className="text-xs text-slate-500">
-          Changes go live only after another Organisation Admin or HRBP approves them.
+          Changes go live only after another HR Admin or HRBP approves them.
         </p>
       </div>
       <ul className="divide-y divide-border-slate">

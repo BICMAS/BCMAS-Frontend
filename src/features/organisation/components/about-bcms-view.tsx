@@ -11,7 +11,7 @@ import {
 
 import { PageHeader } from "@/components/shared/page-header";
 
-// Draft copy for the Organisation Admin "About BCMS" page; the product team can edit the wording.
+// Draft copy for the HR Admin "About BCMS" page; the product team can edit the wording.
 
 const lifecycle = [
   {

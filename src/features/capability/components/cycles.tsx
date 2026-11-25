@@ -57,7 +57,7 @@ function Cycles({ user }: { user: MockUser }) {
         title="Capability Assessment Cycles"
         description={
           viewOnly
-            ? "Monitor completion of the organisation's capability assessment cycles. Cycles are set up by your Organisation Admin."
+            ? "Monitor completion of the organisation's capability assessment cycles. Cycles are set up by your HR Admin."
             : "Manage and monitor organizational capability assessment periods and verification workflows."
         }
         actions={

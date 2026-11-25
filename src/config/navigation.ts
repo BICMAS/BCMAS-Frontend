@@ -172,6 +172,13 @@ export const navigationByPortal: Record<UserPortal, NavigationConfig> = {
             ],
           },
           {
+            id: "assessment-approvals",
+            label: "Assessment Approvals",
+            href: "/talent/approvals",
+            icon: ClipboardCheckIcon,
+            matchPrefix: "/talent/approvals",
+          },
+          {
             id: "insights",
             label: "Executive Insights",
             href: "/insights",

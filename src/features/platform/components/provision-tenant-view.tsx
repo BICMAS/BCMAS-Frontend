@@ -121,7 +121,7 @@ export function ProvisionTenantView() {
       <div className="mx-auto max-w-4xl">
         <PageHeader
           title="New Tenant Provisioning"
-          description="Set up a new enterprise customer: their workspace address, subscription and features, and the first Organisation Admin."
+          description="Set up a new enterprise customer: their workspace address, subscription and features, and the first HR Admin."
         />
 
         {created ? (
@@ -227,7 +227,7 @@ export function ProvisionTenantView() {
             <div>
               <h2 className="text-sm font-bold tracking-wider text-navy uppercase">Initial Admin Account</h2>
               <p className="mt-1 text-xs text-slate-500">
-                This person becomes the tenant&apos;s Organisation Admin and can invite everyone else. They choose their own password.
+                This person becomes the tenant&apos;s HR Admin and can invite everyone else. They choose their own password.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

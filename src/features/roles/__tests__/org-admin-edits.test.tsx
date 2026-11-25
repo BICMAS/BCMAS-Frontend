@@ -11,7 +11,7 @@ import { RolesDirectoryView } from "@/features/roles/components/roles-directory-
 import { listRoles, getRole } from "@/features/roles/services/mock-roles";
 import type { MockUser } from "@/types/user";
 
-// Organisation Admin review (BCMS Edit): changes appear for Organisation Admins only.
+// HR Admin review (BCMS Edit): changes appear for HR Admins only.
 
 const push = vi.fn();
 let currentUser: MockUser | null = getMockUser("user-sarah");
@@ -21,7 +21,7 @@ vi.mock("@/features/talent/use-hydrated-user", () => ({ useHydratedUser: () => c
 
 beforeEach(() => {
   push.mockReset();
-  currentUser = getMockUser("user-sarah"); // Organisation Admin
+  currentUser = getMockUser("user-sarah"); // HR Admin
 });
 
 describe("Organisation Overview", () => {
@@ -92,7 +92,7 @@ describe("Role details", () => {
 });
 
 describe("About BCMS", () => {
-  it("is in the Organisation Admin and HRBP sidebars only", () => {
+  it("is in the HR Admin and HRBP sidebars only", () => {
     const find = (portal: Parameters<typeof getNavigationConfig>[0]) =>
       getNavigationConfig(portal)
         .sections.flatMap((s) => s.items)

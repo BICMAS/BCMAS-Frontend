@@ -3,7 +3,7 @@
  * (sample data). One store drives the employee, manager and admin screens.
  *
  * Behaviour the backend must provide (methodology):
- *  - Organisation Admins create, activate and close cycles. HRBPs view only.
+ *  - HR Admins create, activate and close cycles. HRBPs view only.
  *  - Only employees with an approved mapping to an approved role profile are assessed. The profile
  *    is copied when the cycle is activated, so later profile changes do not alter a live assessment.
  *  - Employees rate every skill, add evidence and submit once. Self-ratings never become results.
@@ -13,7 +13,7 @@
  *    or a higher one the evidence supports;
  *    Not verified records the lower level the evidence supports; More evidence returns the skill.
  *  - Results stay hidden until every skill has a decision, calibration is recorded and an
- *    Organisation Admin releases them.
+ *    HR Admin releases them.
  *  - Within 10 working days an employee may disagree; a different reviewer looks again.
  *  - Every action is logged.
  */
@@ -275,10 +275,10 @@ const isOrgViewer = (u: Person) => isAdmin(u) || u.portal === "hr_ld_admin";
 const isOwner = (a: CapabilityAssessment, u: Person) => a.employeeEmail.toLowerCase() === u.email.toLowerCase();
 
 function requireAdmin(u: Person) {
-  if (!isAdmin(u)) throw new CapabilityError("Only an Organisation Admin can do this.");
+  if (!isAdmin(u)) throw new CapabilityError("Only an HR Admin can do this.");
 }
 
-/** Line Managers and Organisation Admins can review; never one's own assessment. */
+/** Line Managers and HR Admins can review; never one's own assessment. */
 export function reviewerOptions(a: CapabilityAssessment, excludeUserIds: string[] = []) {
   return mockUsers.filter(
     (u) =>
@@ -457,7 +457,7 @@ export function releasedGaps(user: Person) {
   );
 }
 
-/* ── cycles (Organisation Admin) ───────────────────────────────────────── */
+/* ── cycles (HR Admin) ───────────────────────────────────────── */
 
 export type NewCycle = { name: string; scope: string; year: number; cyclesPerYear: CyclesPerYear; number: number };
 
@@ -595,13 +595,13 @@ export function selfAssessmentClosed(a: CapabilityAssessment) {
 }
 
 function requireInTime(a: CapabilityAssessment) {
-  if (selfAssessmentClosed(a)) throw new CapabilityError("Self-assessment has closed. Ask your reviewer or Organisation Admin for an extension.");
+  if (selfAssessmentClosed(a)) throw new CapabilityError("Self-assessment has closed. Ask your reviewer or HR Admin for an extension.");
 }
 
-/** Agreed by the reviewer or an Organisation Admin; never past the verification deadline. */
+/** Agreed by the reviewer or an HR Admin; never past the verification deadline. */
 export function grantExtension(user: Person, id: string, until: string, reason: string) {
   const a = db().assessments.find((x) => x.id === id && x.organisationId === user.organisationId);
-  if (!a || (!isAdmin(user) && a.reviewer.userId !== user.id)) throw new CapabilityError("Only the reviewer or an Organisation Admin can agree an extension.");
+  if (!a || (!isAdmin(user) && a.reviewer.userId !== user.id)) throw new CapabilityError("Only the reviewer or an HR Admin can agree an extension.");
   if (a.submittedAt) throw new CapabilityError("This self-assessment has already been submitted.");
   requireOpen(a);
   const cycle = db().cycles.find((c) => c.id === a.cycleId)!;
@@ -752,7 +752,7 @@ export function decide(user: Person, id: string, skillId: string, input: Decisio
 /** Conflict of interest or an absent manager: an admin, or the reviewer, hands the assessment on. */
 export function reassignReviewer(user: Person, id: string, newReviewerId: string, reason: string) {
   const a = db().assessments.find((x) => x.id === id && x.organisationId === user.organisationId);
-  if (!a || (!isAdmin(user) && a.reviewer.userId !== user.id)) throw new CapabilityError("Only the reviewer or an Organisation Admin can change the reviewer.");
+  if (!a || (!isAdmin(user) && a.reviewer.userId !== user.id)) throw new CapabilityError("Only the reviewer or an HR Admin can change the reviewer.");
   if (a.releasedAt) throw new CapabilityError("Results have already been released.");
   if (!reason.trim()) throw new CapabilityError("Give a reason.");
   const next = reviewerOptions(a, [a.reviewer.userId]).find((u) => u.id === newReviewerId);
