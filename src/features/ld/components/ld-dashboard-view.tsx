@@ -168,8 +168,8 @@ export function LdDashboardView() {
           <section className="rounded-2xl bg-navy p-6 text-white shadow-xl">
             <h2 className="mb-4 text-xs font-bold tracking-widest uppercase opacity-60">Verified Improvements</h2>
             {[
-              [avatar(2), "James Miller", "Level 3 → Level 4 (Expert)"],
-              [avatar(5), "Sarah Connor", "Foundation → Developing"],
+              [avatar(2), "James Miller", "Level 3 → Level 4 (Advanced)"],
+              [avatar(5), "Sarah Connor", "Awareness → Developing"],
             ].map(([src, name, note]) => (
               <div key={name} className="mb-4 flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { IndividualAssessmentView } from "@/features/ld";
+import { CycleDashboardView } from "@/features/ld";
 
 export const metadata: Metadata = {
-  title: "Individual Assessment",
+  title: "Assessment Cycle",
 };
 
 type PageProps = {
@@ -12,5 +12,5 @@ type PageProps = {
 
 export default async function Page({ params }: PageProps) {
   const { assessmentId } = await params;
-  return <IndividualAssessmentView assessmentId={assessmentId} />;
+  return <CycleDashboardView cycleId={assessmentId} />;
 }

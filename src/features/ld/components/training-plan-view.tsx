@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { DownloadIcon, Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,9 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   TRAINING_PLAN_COLUMNS,
-  trainingPlanRows,
+  trainingPlanRows as sampleRows,
+  type TrainingPlanRow,
   type TrainingStatus,
 } from "@/features/ld/training-plan-data";
+import { releasedGaps } from "@/features/capability/services/capability";
+import { useCapabilityUser } from "@/features/capability/use-capability";
+import { mockEmployees } from "@/features/employees/data/mock-employees";
+import type { MockUser } from "@/types/user";
 import { downloadWorkbook } from "@/lib/spreadsheet";
 
 const STATUS_VARIANT: Record<TrainingStatus, "info" | "warning" | "success" | "error"> = {
@@ -25,24 +30,47 @@ const STATUS_VARIANT: Record<TrainingStatus, "info" | "warning" | "success" | "e
 const selectClass =
   "h-10 rounded-lg border border-border-slate bg-white px-3 text-xs font-bold text-navy outline-none focus-visible:ring-2 focus-visible:ring-navy";
 
+/** Gaps from released capability results that have no row yet; L&D allocates the training. */
+function withReleasedGaps(user: MockUser | null): TrainingPlanRow[] {
+  if (!user) return sampleRows;
+  const extra = releasedGaps(user)
+    .map(({ assessment, item, level }): TrainingPlanRow => ({
+      id: `gap-${assessment.id}-${item.skillId}`,
+      employeeName: assessment.employeeName,
+      employeeId: mockEmployees.find((e) => e.id === assessment.employeeId)?.employeeCode ?? assessment.employeeId,
+      department: assessment.department,
+      jobRole: assessment.roleTitle,
+      skillGap: item.name,
+      requiredProficiency: item.required,
+      currentProficiency: level,
+      intervention: null,
+      format: null,
+      provider: null,
+      startDate: null,
+      completionDate: null,
+      status: null,
+    }))
+    .filter((r) => !sampleRows.some((s) => s.employeeId === r.employeeId && s.skillGap === r.skillGap));
+  return [...sampleRows, ...extra];
+}
+
 export function TrainingPlanView() {
+  const trainingPlanRows = withReleasedGaps(useCapabilityUser());
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("all");
   const [status, setStatus] = useState("all");
   const [exporting, setExporting] = useState(false);
 
-  const departments = useMemo(() => [...new Set(trainingPlanRows.map((r) => r.department))].sort(), []);
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return trainingPlanRows.filter((r) => {
-      if (department !== "all" && r.department !== department) return false;
-      if (status === "unallocated" ? r.status !== null : status !== "all" && r.status !== status) return false;
-      if (!q) return true;
-      return [r.employeeName, r.employeeId, r.skillGap, r.intervention ?? "", r.jobRole].some((v) =>
-        v.toLowerCase().includes(q),
-      );
-    });
-  }, [query, department, status]);
+  const departments = [...new Set(trainingPlanRows.map((r) => r.department))].sort();
+  const q = query.trim().toLowerCase();
+  const rows = trainingPlanRows.filter((r) => {
+    if (department !== "all" && r.department !== department) return false;
+    if (status === "unallocated" ? r.status !== null : status !== "all" && r.status !== status) return false;
+    if (!q) return true;
+    return [r.employeeName, r.employeeId, r.skillGap, r.intervention ?? "", r.jobRole].some((v) =>
+      v.toLowerCase().includes(q),
+    );
+  });
 
   const employees = new Set(trainingPlanRows.map((r) => r.employeeId)).size;
   const plans = trainingPlanRows.filter((r) => r.intervention).length;

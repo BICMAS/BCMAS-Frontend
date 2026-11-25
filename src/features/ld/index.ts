@@ -1,6 +1,6 @@
-export { AssessmentCyclesView } from "@/features/ld/components/assessment-cycles-view";
+export { AssessmentCyclesView } from "@/features/capability/components/cycles";
 export { GrowthPathwayView } from "@/features/ld/components/growth-pathway-view";
-export { IndividualAssessmentView } from "@/features/ld/components/individual-assessment-view";
+export { CycleDashboardView } from "@/features/capability/components/cycles";
 export { LdDashboardView } from "@/features/ld/components/ld-dashboard-view";
 export { LearningCatalogueView } from "@/features/ld/components/learning-catalogue-view";
 export { TeamMatrixView } from "@/features/ld/components/team-matrix-view";

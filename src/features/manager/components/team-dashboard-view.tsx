@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { managerActions } from "@/features/manager/team-data";
-import { teamMembers } from "@/features/workforce/mock-workforce";
+import { reviewQueue } from "@/features/capability/services/capability";
+import { useCapabilityUser } from "@/features/capability/use-capability";
 import { cn } from "@/lib/utils";
 
 const gaps = [
@@ -27,8 +28,8 @@ const summary = [
 
 export function TeamDashboardView() {
   const router = useRouter();
-  const james = teamMembers[0];
-  const sarah = teamMembers[1];
+  const user = useCapabilityUser();
+  const waiting = (user ? reviewQueue(user) : []).filter((a) => a.submittedAt && !a.releasedAt && a.items.some((i) => !i.verification));
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -67,7 +68,7 @@ export function TeamDashboardView() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map(({ label, value, note, href }) => (
+        {summary.map(({ label, value, note, href }) => ({ label, note, href, value: label === "Pending Verification" ? String(waiting.length) : value })).map(({ label, value, note, href }) => (
           <Link
             key={label}
             href={href}
@@ -107,7 +108,9 @@ export function TeamDashboardView() {
                     {item.action}
                   </Link>
                 </td>
-                <td className="text-slate-600">{item.detail}</td>
+                <td className="text-slate-600">
+                  {item.id === "verify" ? `${waiting.length} submission${waiting.length === 1 ? "" : "s"} awaiting review` : item.detail}
+                </td>
                 <td className="text-right">
                   <ChevronRightIcon className="ml-auto size-4 text-slate-400" aria-hidden />
                 </td>
@@ -162,20 +165,14 @@ export function TeamDashboardView() {
           </table>
         </section>
         <section className="rounded-2xl border border-border-slate bg-white p-6">
-          <h2 className="text-xs font-bold tracking-wider text-navy uppercase">Pending Capability Verification · 8 New</h2>
+          <h2 className="text-xs font-bold tracking-wider text-navy uppercase">Pending Capability Verification · {waiting.length} New</h2>
           <div className="mt-4 space-y-4">
-            {james ? (
-              <Link href="/verification/evidence/evidence-james" className="block">
-                <p className="text-xs font-bold text-navy">{james.name}</p>
-                <p className="text-xs text-slate-500">Cloud Infrastructure</p>
+            {waiting.map((a) => (
+              <Link key={a.id} href={`/verification/evidence/${a.id}`} className="block">
+                <p className="text-xs font-bold text-navy">{a.employeeName}</p>
+                <p className="text-xs text-slate-500">{a.items.filter((i) => !i.verification).length} skills to decide</p>
               </Link>
-            ) : null}
-            {sarah ? (
-              <Link href="/manager/team/sarah-connor" className="block">
-                <p className="text-xs font-bold text-navy">{sarah.name}</p>
-                <p className="text-xs text-slate-500">AI Governance</p>
-              </Link>
-            ) : null}
+            ))}
           </div>
           <Link href="/verification/team" className="mt-6 block text-center text-[10px] font-bold tracking-widest text-navy uppercase">
             View All Evidence
@@ -187,7 +184,7 @@ export function TeamDashboardView() {
         <div className="space-y-4 text-sm text-navy">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p>
-              <span className="font-bold">James Miller</span> advanced to Level 4 (Expert) in Cloud Solution Design.
+              <span className="font-bold">James Miller</span> advanced to Level 4 – Advanced in Cloud Solution Design.
               <span className="block text-xs text-slate-400">Verified by you · 2 hours ago</span>
             </p>
             <Link href="/manager/team/james" className="text-[10px] font-bold tracking-widest uppercase">

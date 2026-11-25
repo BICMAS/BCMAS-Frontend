@@ -11,6 +11,8 @@ import {
   type CyclesPerYear,
   ORGANISATION_SCOPE,
 } from "@/features/ld/assessment-schedule";
+import { scheduleProgramme } from "@/features/capability/services/capability";
+import { runCapability, useCapabilityUser } from "@/features/capability/use-capability";
 import { cn } from "@/lib/utils";
 
 type SavedProgramme = { scope: string; cycles: CyclesPerYear; year: number };
@@ -25,6 +27,7 @@ export function AssessmentFrequencyPanel({
 }: {
   readOnly?: boolean;
 }) {
+  const user = useCapabilityUser();
   const thisYear = new Date().getFullYear();
   const years = [thisYear, thisYear + 1];
   const [scope, setScope] = useState(ORGANISATION_SCOPE);
@@ -165,14 +168,15 @@ export function AssessmentFrequencyPanel({
               type="button"
               className="mt-4 w-full"
               onClick={() => {
+                if (!user) return;
+                let created = 0;
+                if (!runCapability(() => { created = scheduleProgramme(user, scope, cycles, year); })) return;
                 setSaved((prev) => [
                   { scope, cycles, year },
-                  ...prev.filter(
-                    (p) => !(p.scope === scope && p.year === year),
-                  ),
+                  ...prev.filter((p) => !(p.scope === scope && p.year === year)),
                 ]);
                 toast.success("Assessment configuration saved", {
-                  description: `${scope}: ${cycles} cycle${cycles > 1 ? "s" : ""} in ${year}`,
+                  description: `${scope}: ${created} cycle${created === 1 ? "" : "s"} scheduled for ${year}`,
                 });
               }}
             >

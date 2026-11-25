@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "Assessment Results",
 };
 
-export default function AssessmentResultsPage() {
-  return <AssessmentResultsView />;
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function AssessmentResultsPage({ params }: PageProps) {
+  const { id } = await params;
+  return <AssessmentResultsView assessmentId={id} />;
 }

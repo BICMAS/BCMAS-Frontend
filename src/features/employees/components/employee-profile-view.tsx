@@ -128,7 +128,7 @@ export function EmployeeProfileView({ employee }: EmployeeProfileViewProps) {
               start route is reserved.
             </p>
             <Link
-              href="/me/assessments/cycle-2024/start"
+              href="/assessments/cycles"
               className={cn(buttonVariants({ variant: "secondary" }))}
             >
               Open assessment placeholder

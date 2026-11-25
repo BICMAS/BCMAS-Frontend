@@ -11,51 +11,28 @@ import {
 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { levelLabel, myAssessment, myLatestResults, stageOf } from "@/features/capability/services/capability";
+import { capabilityMatch, gapOf, verifiedLevel } from "@/features/capability/services/scoring";
+import { useCapabilityUser } from "@/features/capability/use-capability";
 import { useSessionStore } from "@/stores/session-store";
 import { cn } from "@/lib/utils";
 
-const skills = [
-  {
-    name: "Cloud Solution Design",
-    status: "Level 4 Met",
-    met: true,
-    verified: 80,
-    target: 20,
-  },
-  {
-    name: "Strategic Influence",
-    status: "Level 3 (Target: 5)",
-    met: false,
-    verified: 60,
-    target: 40,
-  },
-  {
-    name: "API Governance",
-    status: "Level 2 (Target: 4)",
-    met: false,
-    verified: 40,
-    target: 40,
-  },
-] as const;
-
-const todos = [
-  {
+const TODO = {
+  evidence: {
     title: "Submit Evidence",
-    detail: "Cyber Security",
-    href: "/me/progress",
+    href: "/me/assessments/current/results",
     icon: FilePenIcon,
     tone: "border-amber-100 bg-amber-50 text-amber-600",
     detailTone: "text-amber-700",
   },
-  {
+  waiting: {
     title: "Awaiting Manager Verification",
-    detail: "Cloud Infrastructure",
-    href: "/me/skills",
+    href: "/me/assessments/current/results",
     icon: ShieldCheckIcon,
     tone: "border-blue-100 bg-blue-50 text-blue-600",
     detailTone: "text-blue-700",
   },
-  {
+  learning: {
     title: "Begin Assigned Learning",
     detail: "AI Ethics 101",
     href: "/me/growth/goal-ai",
@@ -63,11 +40,30 @@ const todos = [
     tone: "border-green-100 bg-green-50 text-green-600",
     detailTone: "text-green-700",
   },
-] as const;
+} as const;
 
 export function EmployeeHomeView() {
   const name = useSessionStore((state) => state.user.name);
   const firstName = name.split(" ")[0] ?? name;
+  const user = useCapabilityUser();
+  const current = user ? myAssessment(user) : null;
+  const results = user ? myLatestResults(user) : null;
+  const stage = current ? stageOf(current) : null;
+  const due = stage === "not_started" || stage === "in_progress";
+  const reviewing = !!current?.submittedAt && !current.releasedAt;
+  const match = capabilityMatch(results?.items ?? []);
+  const percent = match.percent ?? 0;
+  const skills = (results?.items ?? []).slice(0, 4);
+  const priorities = (results?.items ?? [])
+    .filter((i) => (gapOf(i) ?? 0) > 0)
+    .sort((a, b) => gapOf(b)! - gapOf(a)!)
+    .slice(0, 2);
+  const requested = current?.items.find((i) => i.verification?.decision === "more_evidence");
+  const todos = [
+    ...(due || requested ? [{ ...TODO.evidence, detail: requested?.name ?? "Support your self-ratings" }] : []),
+    ...(reviewing ? [{ ...TODO.waiting, detail: current.reviewer.name }] : []),
+    TODO.learning,
+  ];
 
   return (
     <div className="mx-auto max-w-325">
@@ -89,21 +85,27 @@ export function EmployeeHomeView() {
             </div>
             <div className="relative z-10 flex-1 text-center md:text-left">
               <h2 className="mb-2 text-xl font-bold">
-                Your Capability Assessment Is Due
+                {due
+                  ? "Your Capability Assessment Is Due"
+                  : reviewing
+                    ? "Your Capability Assessment Is Being Reviewed"
+                    : "Your Capability Results"}
               </h2>
               <p className="mb-6 text-sm leading-relaxed text-white/70">
-                Evaluate your current proficiency against the skills required
-                for your role. Complete your self-assessment and provide
-                supporting evidence where required.
+                {due
+                  ? "Evaluate your current proficiency against the skills required for your role. Complete your self-assessment and provide supporting evidence where required."
+                  : reviewing
+                    ? "Your reviewer is checking your evidence. Results appear when they are released."
+                    : "See your verified levels, your gaps and your development plan."}
               </p>
               <Link
-                href="/me/assessments/cycle-2024/start"
+                href={due ? `/me/assessments/${current!.cycleId}/start` : "/me/assessments/current/results"}
                 className={cn(
                   buttonVariants({ variant: "accent" }),
                   "rounded-xl",
                 )}
               >
-                Start Assessment
+                {stage === "not_started" ? "Start Assessment" : due ? "Continue Assessment" : "View progress and results"}
                 <ArrowRightIcon className="size-3.5" aria-hidden />
               </Link>
             </div>
@@ -129,7 +131,7 @@ export function EmployeeHomeView() {
             <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
               <div className="space-y-6">
                 {skills.map((skill) => (
-                  <div key={skill.name}>
+                  <div key={skill.skillId}>
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <span className="text-xs font-bold tracking-wider text-navy uppercase">
                         {skill.name}
@@ -137,23 +139,23 @@ export function EmployeeHomeView() {
                       <span
                         className={cn(
                           "text-[10px] font-bold uppercase",
-                          skill.met ? "text-green-deep" : "text-amber-600",
+                          gapOf(skill) === 0 ? "text-green-deep" : "text-amber-600",
                         )}
                       >
-                        {skill.status}
+                        {levelLabel(verifiedLevel(skill))} (Target: {skill.required})
                       </span>
                     </div>
                     <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
                         className={cn(
                           "h-full",
-                          skill.met ? "bg-green-lime" : "bg-amber-400",
+                          gapOf(skill) === 0 ? "bg-green-lime" : "bg-amber-400",
                         )}
-                        style={{ width: `${skill.verified}%` }}
+                        style={{ width: `${(verifiedLevel(skill) ?? 0) * 20}%` }}
                       />
                       <div
                         className="h-full border-l border-white bg-slate-200"
-                        style={{ width: `${skill.target}%` }}
+                        style={{ width: `${(gapOf(skill) ?? 0) * 20}%` }}
                       />
                     </div>
                   </div>
@@ -168,13 +170,13 @@ export function EmployeeHomeView() {
                   className="mb-4 grid size-24 place-items-center rounded-full"
                   style={{
                     background:
-                      "conic-gradient(var(--color-green-lime) 82%, #e2e8f0 0)",
+                      `conic-gradient(var(--color-green-lime) ${percent}%, #e2e8f0 0)`,
                   }}
-                  aria-label="82 percent role capability alignment"
+                  aria-label={match.percent === null ? "Not assessed yet" : `${percent} percent role capability alignment`}
                 >
                   <div className="grid size-18 place-items-center rounded-full bg-slate-50">
                     <span className="text-xl leading-none font-bold text-navy">
-                      82%
+                      {match.percent === null ? "—" : `${percent}%`}
                     </span>
                   </div>
                 </div>
@@ -238,28 +240,21 @@ export function EmployeeHomeView() {
               My Development Priorities
             </h2>
             <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <span className="mt-1.5 size-1.5 rounded-full bg-navy" />
-                <div>
-                  <p className="text-xs font-bold text-navy">
-                    Master Strategic Stakeholder Engagement
-                  </p>
-                  <p className="mt-1 text-[10px] text-slate-400">
-                    Closing Level 3 to Level 5 gap.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <span className="mt-1.5 size-1.5 rounded-full bg-green-lime" />
-                <div>
-                  <p className="text-xs font-bold text-navy">
-                    Acquire AWS Certified Architect Pro
-                  </p>
-                  <p className="mt-1 text-[10px] text-slate-400">
-                    Verification evidence for Infra Design.
-                  </p>
-                </div>
-              </div>
+              {priorities.length ? (
+                priorities.map((item) => (
+                  <div key={item.skillId} className="flex items-start gap-4">
+                    <span className="mt-1.5 size-1.5 rounded-full bg-green-lime" />
+                    <div>
+                      <p className="text-xs font-bold text-navy">{item.name}</p>
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Level {verifiedLevel(item)} to Level {item.required}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-500">No gaps in your latest results.</p>
+              )}
             </div>
             <Link
               href="/me/growth"

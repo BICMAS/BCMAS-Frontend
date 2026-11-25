@@ -11,7 +11,7 @@ export const mockNotifications: AppNotification[] = [
     section: "new",
     primaryAction: {
       label: "Go to Assessment",
-      href: "/me/assessments/cycle-2024/start",
+      href: "/me/assessments/current/start",
     },
     secondaryActionLabel: "Dismiss",
     icon: "assessment",

@@ -52,6 +52,16 @@ export async function saveSkill(
   return getSkill(skillId);
 }
 
+/** Synchronous read of the organisation's proficiency scale. */
+export function frameworkLevels(): FrameworkLevel[] {
+  return [...frameworkState].sort((a, b) => a.rank - b.rank);
+}
+
+/** What a level looks like for one skill, when the skill describes it. */
+export function skillLevelDescription(skillId: string, level: number): string | null {
+  return skillsState.find((s) => s.id === skillId)?.levels.find((l) => l.level === level)?.description ?? null;
+}
+
 export async function getFramework(): Promise<FrameworkLevel[]> {
   return structuredClone(frameworkState);
 }

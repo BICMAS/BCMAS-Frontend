@@ -8,7 +8,7 @@ import { GapAnalysisView } from "@/features/insights/components/gap-analysis-vie
 import { GrowthPathwayView } from "@/features/ld/components/growth-pathway-view";
 import { TeamDashboardView } from "@/features/manager/components/team-dashboard-view";
 import { TeamDirectoryView } from "@/features/manager/components/team-directory-view";
-import { EvidenceReviewView } from "@/features/verification/components/evidence-review-view";
+import { EvidenceReviewView } from "@/features/capability/components/review";
 import { searchGlobalIndex } from "@/lib/mock/global-search";
 import type { MockUser } from "@/types/user";
 
@@ -40,7 +40,7 @@ describe("Team Dashboard", () => {
     for (const heading of ["Skill/Competency", "Avg. Proficiency Gap", "Employees Affected", "Developmental Priority"]) {
       expect(screen.getByRole("columnheader", { name: heading })).toBeTruthy();
     }
-    expect(screen.getByText("Pending Capability Verification · 8 New")).toBeTruthy();
+    expect(screen.getByText("Pending Capability Verification · 1 New")).toBeTruthy();
   });
 
   it("makes every summary card a link", () => {
@@ -48,7 +48,7 @@ describe("Team Dashboard", () => {
     const card = (name: RegExp) => screen.getByRole("link", { name });
     expect(card(/Team Size/).getAttribute("href")).toBe("/manager/team");
     expect(card(/Average Capability Score/).getAttribute("href")).toBe("/insights/gaps");
-    expect(card(/Pending Verification\s*8/).getAttribute("href")).toBe("/verification/team");
+    expect(card(/Pending Verification\s*1/).getAttribute("href")).toBe("/verification/team");
     expect(card(/Growth Velocity/).getAttribute("href")).toBe("/insights/gaps");
   });
 
@@ -63,7 +63,7 @@ describe("Team Dashboard", () => {
       ["Review development plans", "/ai/plans"],
       ["Follow up on learning", "/manager/team?focus=learning"],
     ]);
-    await user.click(within(centre).getByText("8 submissions awaiting review"));
+    await user.click(within(centre).getByText("1 submission awaiting review"));
     expect(push).toHaveBeenCalledWith("/verification/team"); // the whole row is clickable
   });
 
@@ -151,28 +151,28 @@ describe("Development plan", () => {
 });
 
 describe("Verification decision", () => {
-  it("uses the reviewed options and requires feedback from managers", async () => {
+  it("uses the reviewed options and requires feedback from the reviewer", async () => {
     const user = userEvent.setup();
-    render(<EvidenceReviewView evidenceId="evidence-james" />);
+    render(<EvidenceReviewView evidenceId="cycle-h2-emp-7710" />);
+    const skill = within(screen.getByRole("region", { name: "Cloud Infrastructure Design" }));
     for (const label of ["Verified – Requirements Met", "Additional Evidence Required", "Not Verified – Requirements Not Met"]) {
-      expect(screen.getByText(label)).toBeTruthy();
+      expect(skill.getByText(label)).toBeTruthy();
     }
-    expect(screen.getAllByText(/Provide feedback on the evidence submitted, observed strengths/).length).toBeGreaterThan(0);
-    await user.click(screen.getByText("Verified – Requirements Met"));
-    const submit = screen.getByRole("button", { name: "Submit Verification" }) as HTMLButtonElement;
+    const feedback = skill.getByLabelText(/Feedback for Employee/);
+    expect(feedback.getAttribute("placeholder")).toMatch(/Provide feedback on the evidence submitted, observed strengths/);
+    await user.click(skill.getByText("Verified – Requirements Met"));
+    const submit = skill.getByRole("button", { name: "Submit Verification" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
-    await user.type(screen.getByLabelText(/Feedback for Employee/), "   ");
+    await user.type(feedback, "   ");
     expect(submit.disabled).toBe(true); // whitespace is not feedback
-    await user.type(screen.getByLabelText(/Feedback for Employee/), "Clear architecture evidence.");
+    await user.type(feedback, "Clear architecture evidence.");
     expect(submit.disabled).toBe(false);
   });
 
-  it("is unchanged for other portals", () => {
+  it("offers no decision to people who are not the reviewer", () => {
     asHr();
-    render(<EvidenceReviewView evidenceId="evidence-james" />);
-    expect(screen.getByText("More Evidence Required")).toBeTruthy();
-    expect(screen.queryByText("Additional Evidence Required")).toBeNull();
-    expect((screen.getByRole("button", { name: "Submit Verification" }) as HTMLButtonElement).disabled).toBe(false);
+    render(<EvidenceReviewView evidenceId="cycle-h2-emp-7710" />);
+    expect(screen.queryByRole("button", { name: "Submit Verification" })).toBeNull();
   });
 });
 

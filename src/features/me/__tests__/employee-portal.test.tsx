@@ -14,6 +14,7 @@ import type { NavItem, UserPortal } from "@/types";
 // Employee portal review (BCMS Revert 3).
 
 const push = vi.fn();
+let hydratedId = "user-priya";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
@@ -21,13 +22,17 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("@/features/talent/use-hydrated-user", () => ({
-  useHydratedUser: () => getMockUser("user-priya"),
+  useHydratedUser: () => getMockUser(hydratedId),
 }));
 
-beforeEach(() => push.mockReset());
+beforeEach(() => {
+  push.mockReset();
+  hydratedId = "user-priya";
+});
 
 describe("Employee home", () => {
   it("uses the reviewed wording and call-to-action to-dos", () => {
+    hydratedId = "user-james";
     render(<EmployeeHomeView />);
     expect(
       screen.getByText(/Welcome back\. Take charge of your growth and build the capabilities/),
@@ -35,7 +40,7 @@ describe("Employee home", () => {
     expect(screen.getByText("Your Capability Assessment Is Due")).toBeTruthy();
     expect(screen.getByText(/Evaluate your current proficiency against the skills required/)).toBeTruthy();
     expect(screen.getByText("Overall Role Capability Alignment")).toBeTruthy();
-    for (const todo of ["Submit Evidence", "Awaiting Manager Verification", "Begin Assigned Learning"]) {
+    for (const todo of ["Submit Evidence", "Begin Assigned Learning"]) {
       expect(screen.getByText(todo)).toBeTruthy();
     }
     expect(screen.getByText("My Development Priorities")).toBeTruthy();

@@ -5,6 +5,8 @@ export type RoleSkillRequirement = {
   name: string;
   levelLabel: string;
   category: "technical" | "behavioural";
+  /** Essential to safety or compliance: any gap is critical. */
+  essential?: boolean;
 };
 
 export type RoleEmployeeSummary = {

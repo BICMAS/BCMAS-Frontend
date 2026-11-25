@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/layout/app-shell";
 import { getMockUser } from "@/config/mock-users";
 import { getNavigationConfig, isPathAllowed, isPathBlockedForPortal } from "@/config/navigation";
-import { AssessmentCyclesView } from "@/features/ld/components/assessment-cycles-view";
+import { AssessmentCyclesView } from "@/features/capability/components/cycles";
 import { PLAN_ENTITLEMENTS } from "@/features/platform/services/mock-platform";
 import { SkillsLibraryView } from "@/features/skills/components/skills-library-view";
 import { searchGlobalIndex } from "@/lib/mock/global-search";

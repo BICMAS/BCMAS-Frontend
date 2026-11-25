@@ -260,7 +260,7 @@ describe("Training Plan", () => {
   it("summarises, filters and exports all 13 columns to Excel", async () => {
     const user = userEvent.setup();
     render(<TrainingPlanView />);
-    expect(screen.getByRole("button", { name: /^1\s*Awaiting Allocation/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^4\s*Awaiting Allocation/ })).toBeTruthy();
     expect(TRAINING_PLAN_COLUMNS).toHaveLength(13);
     await user.selectOptions(screen.getByLabelText("Status filter"), "Overdue");
     expect(screen.getAllByRole("row")).toHaveLength(2); // header + 1

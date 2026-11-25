@@ -1,6 +1,6 @@
-export { AssessmentResultsView } from "./components/assessment-results-view";
-export { AssessmentReviewView } from "./components/assessment-review-view";
-export { AssessmentStartView } from "./components/assessment-start-view";
+export { AssessmentResultsView } from "@/features/capability/components/results";
+export { AssessmentReviewView } from "@/features/capability/components/self-assessment";
+export { AssessmentStartView } from "@/features/capability/components/self-assessment";
 export { EmployeeHomeView } from "./components/employee-home-view";
 export { GrowthHubView } from "./components/growth-hub-view";
 export { GrowthJourneyView } from "./components/growth-journey-view";
