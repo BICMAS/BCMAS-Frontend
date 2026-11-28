@@ -18,7 +18,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { MockUser } from "@/types/user";
+import { liveSignOut } from "@/features/authentication/services/live-auth";
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/session-store";
 
 type UserMenuProps = {
   user: MockUser;
@@ -103,7 +105,16 @@ export function UserMenu({
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/login" />}>
+        <DropdownMenuItem
+          render={<Link href="/login" />}
+          onClick={() => {
+            const { liveUser, clearLiveUser } = useSessionStore.getState();
+            if (liveUser) {
+              void liveSignOut();
+              clearLiveUser();
+            }
+          }}
+        >
           <LogOutIcon className="size-4" />
           Sign out
         </DropdownMenuItem>

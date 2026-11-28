@@ -25,10 +25,15 @@ import {
   mockMicrosoftSignIn,
   mockSignIn,
 } from "@/features/authentication/services/mock-auth";
+import { liveAuthEnabled, liveSignIn } from "@/features/authentication/services/live-auth";
+import { getNavigationConfig } from "@/config/navigation";
+import { useSessionStore } from "@/stores/session-store";
 
 export function LoginForm() {
   const router = useRouter();
   const [ssoLoading, setSsoLoading] = useState(false);
+  const live = liveAuthEnabled();
+  const setLiveUser = useSessionStore((s) => s.setLiveUser);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -39,10 +44,23 @@ export function LoginForm() {
     },
   });
 
-  const { control, handleSubmit, formState } = form;
+  const { control, handleSubmit, formState, setError } = form;
   const submitting = formState.isSubmitting;
 
   const onSubmit = handleSubmit(async (values) => {
+    if (live) {
+      const result = await liveSignIn(values.email.trim(), values.password);
+      if (!result.ok) {
+        if (result.fields?.email) setError("email", { message: result.fields.email });
+        if (result.fields?.password) setError("password", { message: result.fields.password });
+        toast.error(result.message);
+        return;
+      }
+      setLiveUser(result.user);
+      toast.success(`Signed in as ${result.user.name}`);
+      router.push(getNavigationConfig(result.user.portal).defaultHref);
+      return;
+    }
     const result = await mockSignIn(values);
 
     if (result.status === "locked") {
@@ -61,6 +79,10 @@ export function LoginForm() {
   });
 
   const onMicrosoft = async () => {
+    if (live) {
+      toast.message("Microsoft sign-in is not connected to BCMS yet. Use your email and password.");
+      return;
+    }
     setSsoLoading(true);
     try {
       const result = await mockMicrosoftSignIn(form.getValues("email"));
@@ -100,9 +122,11 @@ export function LoginForm() {
           <p className="mt-1 text-sm text-slate-500">
             Sign in to manage your organisational capability.
           </p>
-          <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-            {DEMO_AUTH_HINT}
-          </p>
+          {!live ? (
+            <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+              {DEMO_AUTH_HINT}
+            </p>
+          ) : null}
         </div>
 
         <MicrosoftSsoButton
